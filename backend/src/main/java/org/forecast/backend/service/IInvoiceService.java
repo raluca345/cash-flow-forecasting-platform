@@ -1,6 +1,7 @@
 package org.forecast.backend.service;
 
 import org.forecast.backend.dtos.CreateInvoiceRequest;
+import org.forecast.backend.dtos.InvoiceSearchCriteria;
 import org.forecast.backend.dtos.UpdateInvoiceDraftPartialRequest;
 import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.model.Invoice;
@@ -14,7 +15,6 @@ public interface IInvoiceService {
 
     Invoice getInvoice(String invoiceNumber);
 
-    List<Invoice> getAllInvoices();
 
     Page<Invoice> getAllInvoices(Pageable pageable);
 
@@ -33,4 +33,6 @@ public interface IInvoiceService {
     Invoice editInvoice(String invoiceNumber, UpdateInvoiceDraftPartialRequest request);
 
     void markOverdueInvoices();
+
+    Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable);
 }

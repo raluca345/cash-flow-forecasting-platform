@@ -79,23 +79,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle unsupported operation exceptions
-     */
-    @ExceptionHandler(UnsupportedOperationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResponseEntity<ErrorResponse> handleUnsupportedOperationException(UnsupportedOperationException ex) {
-        log.warn("Unsupported operation: {}", ex.getMessage());
-        
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("UNSUPPORTED_OPERATION")
-                .message(ex.getMessage())
-                .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-    }
-
-    /**
      * Handle all other exceptions
      */
     @ExceptionHandler(Exception.class)
@@ -113,4 +96,3 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 }
-

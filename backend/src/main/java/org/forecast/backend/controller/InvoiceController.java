@@ -2,12 +2,9 @@ package org.forecast.backend.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.forecast.backend.dtos.CreateInvoiceRequest;
-import org.forecast.backend.dtos.InvoiceResponse;
-import org.forecast.backend.dtos.PaginatedResponse;
-import org.forecast.backend.dtos.UpdateInvoiceDraftPartialRequest;
+import org.forecast.backend.dtos.*;
 import org.forecast.backend.model.Invoice;
-import org.forecast.backend.service.InvoiceService;
+import org.forecast.backend.service.IInvoiceService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class InvoiceController {
 
-    private final InvoiceService invoiceService;
+    private final IInvoiceService invoiceService;
 
     @PostMapping
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest createInvoiceRequest) {
@@ -36,19 +33,22 @@ public class InvoiceController {
 
     @GetMapping
     public ResponseEntity<PaginatedResponse<InvoiceResponse>> getAllInvoices(
-            @PageableDefault(size = 10, page = 1, sort = "issueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 10, page = 0, sort = "issueDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<Invoice> invoicePage = invoiceService.getAllInvoices(pageable);
-        PaginatedResponse<InvoiceResponse> response = PaginatedResponse.fromPage(invoicePage.map(InvoiceResponse::fromEntity));
+        PaginatedResponse<InvoiceResponse> response = PaginatedResponse.fromPageContent(
+                invoicePage,
+                InvoiceResponse.fromEntities(invoicePage.getContent())
+        );
         return ResponseEntity.ok().body(response);
     }
 
-    @PatchMapping(path = "{invoiceNumber}/send", consumes = "application/json", produces = "application/json")
+    @PatchMapping("{invoiceNumber}/send")
     public ResponseEntity<InvoiceResponse> sendInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.sendInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
-    @PatchMapping(path = "{invoiceNumber}/pay", consumes = "application/json", produces = "application/json")
+    @PatchMapping("{invoiceNumber}/pay")
     public ResponseEntity<InvoiceResponse> payInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.payInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
@@ -60,17 +60,28 @@ public class InvoiceController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping(path = "{invoiceNumber}/cancel", consumes = "application/json", produces = "application/json")
+    @PatchMapping("{invoiceNumber}/cancel")
     public ResponseEntity<InvoiceResponse> cancelInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.cancelInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
-    @PatchMapping(path = "{invoiceNumber}", consumes = "application/json", produces = "application/json")
+    @PatchMapping("{invoiceNumber}")
     public ResponseEntity<InvoiceResponse> editInvoice(@PathVariable String invoiceNumber,
                                                        @Valid @RequestBody UpdateInvoiceDraftPartialRequest request) {
         Invoice invoice = invoiceService.editInvoice(invoiceNumber, request);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
-}
 
+    @GetMapping("/search")
+    public ResponseEntity<PaginatedResponse<InvoiceResponse>> filterInvoices(
+            @ModelAttribute InvoiceSearchCriteria criteria,
+            @PageableDefault(size = 10, page = 0, sort = "issueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<Invoice> filteredInvoicePage = invoiceService.filterByCriteria(criteria, pageable);
+        PaginatedResponse<InvoiceResponse> response = PaginatedResponse.fromPageContent(
+                filteredInvoicePage,
+                InvoiceResponse.fromEntities(filteredInvoicePage.getContent())
+        );
+        return ResponseEntity.ok().body(response);
+    }
+}

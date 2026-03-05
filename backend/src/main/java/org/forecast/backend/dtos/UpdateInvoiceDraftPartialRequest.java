@@ -2,7 +2,7 @@ package org.forecast.backend.dtos;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.PastOrPresent;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +25,6 @@ public class UpdateInvoiceDraftPartialRequest {
     @PastOrPresent(message = "Issue date cannot be in the future")
     private LocalDate issueDate;
 
-    @Future(message = "Due date must be in the future")
+    @FutureOrPresent(message = "Due date must be today or in the future")
     private LocalDate dueDate;
 }
-

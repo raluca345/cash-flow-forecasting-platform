@@ -24,11 +24,16 @@ public class CreateInvoiceRequest {
     @Digits(integer = 13, fraction = 2, message = "Amount must have at most 13 digits and 2 decimal places")
     private BigDecimal amount;
 
+    @NotBlank(message = "Currency is required")
+    @Size(min = 3, max = 3, message = "Currency must be a 3-letter ISO code")
+    @Pattern(regexp = "[A-Z]{3}", message = "Currency must be uppercase 3 letters (e.g. USD)")
+    private String currency;
+
     @NotNull(message = "Issue date is required")
     @PastOrPresent(message = "Issue date cannot be in the future")
     private LocalDate issueDate;
 
     @NotNull(message = "Due date is required")
-    @Future(message = "Due date must be in the future")
+    @FutureOrPresent(message = "Due date must be today or in the future")
     private LocalDate dueDate;
 }

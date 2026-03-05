@@ -47,5 +47,16 @@ public class PaginatedResponse<T> {
                 .isEmpty(page.isEmpty())
                 .build();
     }
-}
 
+    public static <T> PaginatedResponse<T> fromPageContent(Page<?> page, List<T> content) {
+        return PaginatedResponse.<T>builder()
+                .content(content)
+                .pageNumber(page.getNumber())
+                .pageSize(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .isLast(page.isLast())
+                .isEmpty(page.isEmpty())
+                .build();
+    }
+}

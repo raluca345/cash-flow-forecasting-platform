@@ -7,6 +7,7 @@ import jakarta.persistence.PreUpdate;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @MappedSuperclass
 @Getter
@@ -14,6 +15,9 @@ public abstract class BaseEntity {
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(updatable = false)
+    private UUID createdBy;
 
     @Column(nullable = false)
     private Instant updatedAt;

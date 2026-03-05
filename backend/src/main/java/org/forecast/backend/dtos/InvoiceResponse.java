@@ -23,7 +23,12 @@ public class InvoiceResponse {
     private UUID id;
     private String invoiceNumber;
     private String clientName;
+
     private BigDecimal amount;
+    private String currency;
+
+    private BigDecimal amountBaseCurrency;
+    private BigDecimal exchangeRate;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate issueDate;
@@ -43,6 +48,9 @@ public class InvoiceResponse {
                 .invoiceNumber(invoice.getInvoiceNumber())
                 .clientName(invoice.getClient().getName())
                 .amount(invoice.getAmount())
+                .currency(invoice.getCurrency())
+                .amountBaseCurrency(invoice.getAmountBaseCurrency())
+                .exchangeRate(invoice.getExchangeRate())
                 .issueDate(invoice.getIssueDate())
                 .dueDate(invoice.getDueDate())
                 .status(invoice.getStatus())
@@ -57,4 +65,3 @@ public class InvoiceResponse {
                 .toList();
     }
 }
-
