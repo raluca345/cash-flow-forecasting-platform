@@ -9,6 +9,7 @@ import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Client;
 import org.forecast.backend.model.Invoice;
+import org.forecast.backend.model.InvoiceItem;
 import org.forecast.backend.repository.InvoiceRepository;
 import org.forecast.backend.util.InvoiceNumberGenerator;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,10 +21,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.time.Instant;
 
 import static org.forecast.backend.specifications.InvoiceSpecifications.*;
 
@@ -49,8 +50,26 @@ public class InvoiceService implements IInvoiceService{
         Client client = clientService.get(request.getClientId());
 
         invoice.setClient(client);
-        invoice.setAmount(request.getAmount());
+        invoice.setTaxAmount(request.getTaxAmount());
         invoice.setCurrency(request.getCurrency().toUpperCase());
+
+        // Items-authoritative: map items, compute subtotal/total
+        invoice.setItems(new ArrayList<>());
+        if (request.getItems() != null) {
+            for (var itemReq : request.getItems()) {
+                if (itemReq == null) continue;
+                InvoiceItem item = new InvoiceItem();
+                item.setDescription(itemReq.getDescription());
+                item.setQuantity(itemReq.getQuantity());
+                item.setUnitPrice(itemReq.getUnitPrice());
+                // total is computed by entity lifecycle hooks, but set it now for immediate calculations
+                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() > 0) {
+                    item.setTotal(itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                }
+                invoice.addItem(item);
+            }
+        }
+        invoice.recalculateAmountFromItems();
 
         BigDecimal rateBaseToInvoice = exchangeRateService.getRate(baseCurrency, invoice.getCurrency());
         if (rateBaseToInvoice == null || rateBaseToInvoice.signum() <= 0) {
@@ -60,8 +79,8 @@ public class InvoiceService implements IInvoiceService{
         invoice.setExchangeRate(rateBaseToInvoice);
 
         // Frankfurter semantics: 1 baseCurrency = rate * invoiceCurrency
-        // So: amountBaseCurrency = amountInvoice / rate
-        BigDecimal amountBase = request.getAmount()
+        // So: amountBaseCurrency = totalAmount(invoice currency) / rate
+        BigDecimal amountBase = invoice.getTotalAmount()
                 .divide(rateBaseToInvoice, 2, RoundingMode.HALF_UP);
         invoice.setAmountBaseCurrency(amountBase);
 
@@ -139,13 +158,32 @@ public class InvoiceService implements IInvoiceService{
             throw new UnsupportedOperationException("Only drafts can be edited.");
         }
 
-        if (request.getAmount() != null) {
-            invoice.setAmount(request.getAmount());
+        if (request.getTaxAmount() != null) {
+            invoice.setTaxAmount(request.getTaxAmount());
+        }
+        if (request.getItems() != null) {
+            invoice.getItems().clear();
+            for (var itemReq : request.getItems()) {
+                if (itemReq == null) continue;
+                InvoiceItem item = new InvoiceItem();
+                item.setDescription(itemReq.getDescription());
+                item.setQuantity(itemReq.getQuantity());
+                item.setUnitPrice(itemReq.getUnitPrice());
+                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() > 0) {
+                    item.setTotal(itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                }
+                invoice.addItem(item);
+            }
+        }
 
-            BigDecimal baseAmount = request.getAmount()
+        // ensure totals are consistent if tax or items changed
+        if (request.getTaxAmount() != null || request.getItems() != null) {
+            invoice.recalculateAmountFromItems();
+            BigDecimal baseAmount = invoice.getTotalAmount()
                     .divide(invoice.getExchangeRate(), 2, RoundingMode.HALF_UP);
             invoice.setAmountBaseCurrency(baseAmount);
         }
+
         if (request.getIssueDate() != null) {
             invoice.setIssueDate(request.getIssueDate());
         }

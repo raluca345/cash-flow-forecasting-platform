@@ -2,6 +2,7 @@ package org.forecast.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -42,6 +43,23 @@ public class Company {
     @Size(max = 500, message = "Address must be at most 500 characters")
     @Column(length = 500)
     private String address;
+
+    @Email(message = "Email should be valid")
+    @Size(max = 320, message = "Email must be at most 320 characters")
+    @Column(length = 320)
+    private String email;
+
+    /**
+     * Pragmatic phone validation: allow +, digits, spaces, and common separators.
+     */
+    @Size(max = 32, message = "Phone must be at most 32 characters")
+    @Pattern(regexp = "^[0-9+()\\-\\s]*$", message = "Phone contains invalid characters")
+    @Column(length = 32)
+    private String phone;
+
+    @Size(max = 2048, message = "Website URL must be at most 2048 characters")
+    @Column(length = 2048)
+    private String website;
 
     /**
      * IBAN format varies by country; we validate a common, simple form: 15-34 alphanumeric, no spaces.

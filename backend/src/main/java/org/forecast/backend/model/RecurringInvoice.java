@@ -40,21 +40,23 @@ public class RecurringInvoice extends BaseEntity{
 
     public Invoice generateInvoice(String invoiceNumber){
 
-        Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber(invoiceNumber);
-        invoice.setClient(client);
-        invoice.setAmount(amount);
+         Invoice invoice = new Invoice();
+         invoice.setInvoiceNumber(invoiceNumber);
+         invoice.setClient(client);
+         invoice.setSubtotal(amount);
+         invoice.setTaxAmount(java.math.BigDecimal.ZERO);
+         invoice.setTotalAmount(amount);
 
-        // Default currency assumptions for recurring invoices (can be made configurable later)
-        invoice.setCurrency("USD");
-        invoice.setExchangeRate(java.math.BigDecimal.ONE);
-        invoice.setAmountBaseCurrency(amount);
+         // Default currency assumptions for recurring invoices (can be made configurable later)
+         invoice.setCurrency("USD");
+         invoice.setExchangeRate(java.math.BigDecimal.ONE);
+         invoice.setAmountBaseCurrency(amount);
 
-        invoice.setIssueDate(nextGenerationDate);
-        invoice.setDueDate(nextGenerationDate.plusDays(30)); //configurable later
+         invoice.setIssueDate(nextGenerationDate);
+         invoice.setDueDate(nextGenerationDate.plusDays(30)); //configurable later
 
-        return invoice;
-    }
+         return invoice;
+     }
 
     public void advanceNextGenerationDate() {
         switch (frequency) {

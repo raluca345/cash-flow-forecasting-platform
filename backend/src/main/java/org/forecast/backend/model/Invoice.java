@@ -9,13 +9,15 @@ import org.forecast.backend.enums.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(
         name = "invoices",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"invoiceNumber"})
+                @UniqueConstraint(columnNames = {"company_id", "invoiceNumber"})
         }
 )
 @Getter
@@ -29,16 +31,40 @@ public class Invoice extends BaseEntity{
     @Column(nullable = false)
     private String invoiceNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
     @NotNull(message = "Client is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
-    @Digits(integer = 13, fraction = 2, message = "Amount must have at most 13 digits and 2 decimal places")
-    @Column(nullable = false, precision=15, scale=2)
-    private BigDecimal amount;
+    @OneToMany(
+            mappedBy = "invoice",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<InvoiceItem> items = new ArrayList<>();
+
+    @NotNull(message = "Subtotal is required")
+    @DecimalMin(value = "0.00", message = "Subtotal must be >= 0")
+    @Digits(integer = 13, fraction = 2, message = "Subtotal must have at most 13 digits and 2 decimal places")
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal subtotal;
+
+    @NotNull(message = "Tax amount is required")
+    @DecimalMin(value = "0.00", message = "Tax amount must be >= 0")
+    @Digits(integer = 13, fraction = 2, message = "Tax amount must have at most 13 digits and 2 decimal places")
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal taxAmount;
+
+    @NotNull(message = "Total amount is required")
+    @DecimalMin(value = "0.00", message = "Total amount must be >= 0")
+    @Digits(integer = 13, fraction = 2, message = "Total amount must have at most 13 digits and 2 decimal places")
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalAmount;
 
 
     @NotBlank(message = "Currency is required")
@@ -129,6 +155,34 @@ public class Invoice extends BaseEntity{
 
     public boolean isCancelled() {
         return status == InvoiceStatus.CANCELLED;
+    }
+
+    public void addItem(InvoiceItem item) {
+        if (item == null) return;
+        items.add(item);
+        item.setInvoice(this);
+    }
+
+    public void removeItem(InvoiceItem item) {
+        if (item == null) return;
+        items.remove(item);
+        item.setInvoice(null);
+    }
+
+    /**
+     * Optional convenience to keep header totals consistent with line items.
+     * Call from service layer when line items change.
+     */
+    public void recalculateAmountFromItems() {
+        if (items == null || items.isEmpty()) return;
+        this.subtotal = items.stream()
+                .map(InvoiceItem::getTotal)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (this.taxAmount == null) {
+            this.taxAmount = BigDecimal.ZERO;
+        }
+        this.totalAmount = this.subtotal.add(this.taxAmount);
     }
 
 }

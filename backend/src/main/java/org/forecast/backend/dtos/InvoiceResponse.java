@@ -24,8 +24,12 @@ public class InvoiceResponse {
     private String invoiceNumber;
     private String clientName;
 
-    private BigDecimal amount;
+    private BigDecimal subtotal;
+    private BigDecimal taxAmount;
+    private BigDecimal totalAmount;
     private String currency;
+
+    private List<InvoiceItemResponse> items;
 
     private BigDecimal amountBaseCurrency;
     private BigDecimal exchangeRate;
@@ -47,8 +51,11 @@ public class InvoiceResponse {
                 .id(invoice.getId())
                 .invoiceNumber(invoice.getInvoiceNumber())
                 .clientName(invoice.getClient().getName())
-                .amount(invoice.getAmount())
+                .subtotal(invoice.getSubtotal())
+                .taxAmount(invoice.getTaxAmount())
+                .totalAmount(invoice.getTotalAmount())
                 .currency(invoice.getCurrency())
+                .items(invoice.getItems() == null ? List.of() : InvoiceItemResponse.fromEntities(invoice.getItems()))
                 .amountBaseCurrency(invoice.getAmountBaseCurrency())
                 .exchangeRate(invoice.getExchangeRate())
                 .issueDate(invoice.getIssueDate())

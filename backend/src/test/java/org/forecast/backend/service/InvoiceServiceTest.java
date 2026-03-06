@@ -77,7 +77,9 @@ class InvoiceServiceTest {
         inv.setId(UUID.randomUUID());
         inv.setInvoiceNumber(invoiceNumber);
         inv.setClient(client(UUID.randomUUID()));
-        inv.setAmount(new BigDecimal("100.00"));
+        inv.setSubtotal(new BigDecimal("100.00"));
+        inv.setTaxAmount(BigDecimal.ZERO);
+        inv.setTotalAmount(new BigDecimal("100.00"));
         inv.setCurrency("USD");
         inv.setExchangeRate(new BigDecimal("2.000000")); // 1 USD(base) = 2 EUR(invoice) style
         inv.setAmountBaseCurrency(new BigDecimal("50.00"));
@@ -93,7 +95,19 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .amount(new BigDecimal("123.45"))
+                .taxAmount(new BigDecimal("3.45"))
+                .items(List.of(
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Cable")
+                                .quantity(2)
+                                .unitPrice(new BigDecimal("60.00"))
+                                .build(),
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Install")
+                                .quantity(1)
+                                .unitPrice(new BigDecimal("0.00"))
+                                .build()
+                ))
                 .currency("eur")
                 .issueDate(LocalDate.of(2024, 1, 10))
                 .dueDate(LocalDate.of(2024, 2, 10))
@@ -109,11 +123,14 @@ class InvoiceServiceTest {
 
         assertEquals("INV-2026-00001", saved.getInvoiceNumber());
         assertEquals(clientId, saved.getClient().getId());
-        assertEquals(new BigDecimal("123.45"), saved.getAmount());
+        assertEquals(new BigDecimal("120.00"), saved.getSubtotal());
+        assertEquals(new BigDecimal("3.45"), saved.getTaxAmount());
+        assertEquals(new BigDecimal("123.45"), saved.getTotalAmount());
         assertEquals("EUR", saved.getCurrency());
         assertEquals(new BigDecimal("1.200000"), saved.getExchangeRate());
 
-        BigDecimal expectedBase = request.getAmount().divide(new BigDecimal("1.200000"), 2, RoundingMode.HALF_UP);
+        // base currency is computed from totalAmount
+        BigDecimal expectedBase = saved.getTotalAmount().divide(new BigDecimal("1.200000"), 2, RoundingMode.HALF_UP);
         assertEquals(expectedBase, saved.getAmountBaseCurrency());
         assertEquals(request.getIssueDate(), saved.getIssueDate());
         assertEquals(request.getDueDate(), saved.getDueDate());
@@ -127,7 +144,14 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .amount(new BigDecimal("10.00"))
+                .taxAmount(BigDecimal.ZERO)
+                .items(List.of(
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Service")
+                                .quantity(1)
+                                .unitPrice(new BigDecimal("10.00"))
+                                .build()
+                ))
                 .currency("EUR")
                 .issueDate(LocalDate.now())
                 .dueDate(LocalDate.now())
@@ -147,7 +171,14 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .amount(new BigDecimal("10.00"))
+                .taxAmount(BigDecimal.ZERO)
+                .items(List.of(
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Service")
+                                .quantity(1)
+                                .unitPrice(new BigDecimal("10.00"))
+                                .build()
+                ))
                 .currency("EUR")
                 .issueDate(LocalDate.now())
                 .dueDate(LocalDate.now())
@@ -296,7 +327,7 @@ class InvoiceServiceTest {
         when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .amount(new BigDecimal("10.00"))
+                .taxAmount(new BigDecimal("10.00"))
                 .build();
 
         UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
@@ -312,12 +343,20 @@ class InvoiceServiceTest {
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .amount(new BigDecimal("20.00"))
+                .taxAmount(new BigDecimal("0.00"))
+                .items(List.of(
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Updated")
+                                .quantity(1)
+                                .unitPrice(new BigDecimal("20.00"))
+                                .build()
+                ))
                 .build();
 
         Invoice result = invoiceService.editInvoice("INV-1", request);
 
-        assertEquals(new BigDecimal("20.00"), result.getAmount());
+        assertEquals(new BigDecimal("20.00"), result.getSubtotal());
+        assertEquals(new BigDecimal("20.00"), result.getTotalAmount());
         BigDecimal expectedBase = new BigDecimal("20.00").divide(invoice.getExchangeRate(), 2, RoundingMode.HALF_UP);
         assertEquals(expectedBase, result.getAmountBaseCurrency());
         verify(invoiceRepository).save(invoice);
