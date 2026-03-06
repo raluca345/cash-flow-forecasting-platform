@@ -45,6 +45,11 @@ public class RecurringInvoice extends BaseEntity{
         invoice.setClient(client);
         invoice.setAmount(amount);
 
+        // Default currency assumptions for recurring invoices (can be made configurable later)
+        invoice.setCurrency("USD");
+        invoice.setExchangeRate(java.math.BigDecimal.ONE);
+        invoice.setAmountBaseCurrency(amount);
+
         invoice.setIssueDate(nextGenerationDate);
         invoice.setDueDate(nextGenerationDate.plusDays(30)); //configurable later
 

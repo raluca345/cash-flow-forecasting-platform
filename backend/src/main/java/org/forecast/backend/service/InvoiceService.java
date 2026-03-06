@@ -44,7 +44,6 @@ public class InvoiceService implements IInvoiceService{
     public Invoice createInvoice(CreateInvoiceRequest request) {
 
         Invoice invoice = new Invoice();
-        invoice.setId(UUID.randomUUID());
         invoice.setInvoiceNumber(invoiceNumberGenerator.generateInvoiceNumber());
 
         Client client = clientService.get(request.getClientId());

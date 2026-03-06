@@ -10,12 +10,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "clients",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"name"})
-        }
-)
+@Table(name = "clients")
 @Getter
 @Setter
 public class Client {
@@ -30,4 +25,6 @@ public class Client {
 
     @Email(message = "Email should be valid")
     private String email;
+
+    private String address;
 }

@@ -18,7 +18,6 @@ public class ClientService implements  IClientService {
     @Override
     public Client create(CreateClientRequest request) {
         Client client = new Client();
-        client.setId(UUID.randomUUID());
         client.setName(request.getName());
         client.setEmail(request.getEmail());
         return clientRepository.save(client);
