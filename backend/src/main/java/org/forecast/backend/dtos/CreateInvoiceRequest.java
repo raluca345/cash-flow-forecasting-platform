@@ -21,10 +21,11 @@ public class CreateInvoiceRequest {
     @NotNull(message = "Client ID is required")
     private UUID clientId;
 
-    @NotNull(message = "Tax amount is required")
-    @DecimalMin(value = "0.00", message = "Tax amount must be >= 0")
-    @Digits(integer = 13, fraction = 2, message = "Tax amount must have at most 13 digits and 2 decimal places")
-    private BigDecimal taxAmount;
+    @NotNull(message = "Tax rate is required")
+    @DecimalMin(value = "0.00", message = "Tax rate must be >= 0")
+    @DecimalMax(value = "100.00", message = "Tax rate must be <= 100")
+    @Digits(integer = 3, fraction = 3, message = "Tax rate must have at most 3 digits and 3 decimal places")
+    private BigDecimal taxRatePercent;
 
     @NotNull(message = "Items are required")
     @Size(min = 1, message = "At least one item is required")

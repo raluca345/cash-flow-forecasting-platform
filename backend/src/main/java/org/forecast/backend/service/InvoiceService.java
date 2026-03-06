@@ -41,6 +41,17 @@ public class InvoiceService implements IInvoiceService{
     @Value("${app.currency.base:USD}")
     private String baseCurrency;
 
+    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+
+    private static BigDecimal calculateTaxAmount(BigDecimal subtotal, BigDecimal taxRatePercent) {
+        if (subtotal == null) subtotal = BigDecimal.ZERO;
+        if (taxRatePercent == null) return BigDecimal.ZERO;
+
+        return subtotal
+                .multiply(taxRatePercent)
+                .divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
+    }
+
     @Override
     public Invoice createInvoice(CreateInvoiceRequest request) {
 
@@ -50,10 +61,9 @@ public class InvoiceService implements IInvoiceService{
         Client client = clientService.get(request.getClientId());
 
         invoice.setClient(client);
-        invoice.setTaxAmount(request.getTaxAmount());
         invoice.setCurrency(request.getCurrency().toUpperCase());
 
-        // Items-authoritative: map items, compute subtotal/total
+        // Items-authoritative: map items, compute subtotal
         invoice.setItems(new ArrayList<>());
         if (request.getItems() != null) {
             for (var itemReq : request.getItems()) {
@@ -63,12 +73,18 @@ public class InvoiceService implements IInvoiceService{
                 item.setQuantity(itemReq.getQuantity());
                 item.setUnitPrice(itemReq.getUnitPrice());
                 // total is computed by entity lifecycle hooks, but set it now for immediate calculations
-                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() > 0) {
-                    item.setTotal(itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() != null && itemReq.getQuantity().signum() > 0) {
+                    item.setTotal(itemReq.getUnitPrice().multiply(itemReq.getQuantity()));
                 }
                 invoice.addItem(item);
             }
         }
+
+        // compute subtotal from items
+        invoice.recalculateAmountFromItems();
+
+        // compute tax/total from tax rate
+        invoice.setTaxAmount(calculateTaxAmount(invoice.getSubtotal(), request.getTaxRatePercent()));
         invoice.recalculateAmountFromItems();
 
         BigDecimal rateBaseToInvoice = exchangeRateService.getRate(baseCurrency, invoice.getCurrency());
@@ -158,9 +174,11 @@ public class InvoiceService implements IInvoiceService{
             throw new UnsupportedOperationException("Only drafts can be edited.");
         }
 
-        if (request.getTaxAmount() != null) {
-            invoice.setTaxAmount(request.getTaxAmount());
+        BigDecimal effectiveTaxRatePercent = null;
+        if (request.getTaxRatePercent() != null) {
+            effectiveTaxRatePercent = request.getTaxRatePercent();
         }
+
         if (request.getItems() != null) {
             invoice.getItems().clear();
             for (var itemReq : request.getItems()) {
@@ -169,16 +187,20 @@ public class InvoiceService implements IInvoiceService{
                 item.setDescription(itemReq.getDescription());
                 item.setQuantity(itemReq.getQuantity());
                 item.setUnitPrice(itemReq.getUnitPrice());
-                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() > 0) {
-                    item.setTotal(itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                if (itemReq.getUnitPrice() != null && itemReq.getQuantity() != null && itemReq.getQuantity().signum() > 0) {
+                    item.setTotal(itemReq.getUnitPrice().multiply(itemReq.getQuantity()));
                 }
                 invoice.addItem(item);
             }
         }
 
-        // ensure totals are consistent if tax or items changed
-        if (request.getTaxAmount() != null || request.getItems() != null) {
+        // ensure totals are consistent if tax rate or items changed
+        if (request.getTaxRatePercent() != null || request.getItems() != null) {
             invoice.recalculateAmountFromItems();
+            BigDecimal newTax = calculateTaxAmount(invoice.getSubtotal(), effectiveTaxRatePercent != null ? effectiveTaxRatePercent : BigDecimal.ZERO);
+            invoice.setTaxAmount(newTax);
+            invoice.recalculateAmountFromItems();
+
             BigDecimal baseAmount = invoice.getTotalAmount()
                     .divide(invoice.getExchangeRate(), 2, RoundingMode.HALF_UP);
             invoice.setAmountBaseCurrency(baseAmount);

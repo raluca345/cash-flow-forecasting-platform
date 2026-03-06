@@ -1,6 +1,7 @@
 package org.forecast.backend.dtos;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.FutureOrPresent;
@@ -20,13 +21,11 @@ import java.util.List;
 @Builder
 public class UpdateInvoiceDraftPartialRequest {
 
-    @DecimalMin(value = "0.00", message = "Tax amount must be >= 0")
-    @Digits(integer = 13, fraction = 2, message = "Tax amount must have at most 13 digits and 2 decimal places")
-    private BigDecimal taxAmount;
+    @DecimalMin(value = "0.00", message = "Tax rate must be >= 0")
+    @DecimalMax(value = "100.00", message = "Tax rate must be <= 100")
+    @Digits(integer = 3, fraction = 3, message = "Tax rate must have at most 3 digits and 3 decimal places")
+    private BigDecimal taxRatePercent;
 
-    /**
-     * If present, replaces the current item list.
-     */
     @Valid
     private List<CreateInvoiceItemRequest> items;
 

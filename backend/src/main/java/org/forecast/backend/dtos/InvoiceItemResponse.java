@@ -19,7 +19,7 @@ public class InvoiceItemResponse {
 
     private UUID id;
     private String description;
-    private long quantity;
+    private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal total;
 
@@ -42,4 +42,3 @@ public class InvoiceItemResponse {
         return out;
     }
 }
-

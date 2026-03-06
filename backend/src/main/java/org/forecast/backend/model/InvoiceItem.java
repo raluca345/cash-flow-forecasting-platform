@@ -3,7 +3,6 @@ package org.forecast.backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,8 +26,11 @@ public class InvoiceItem {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Min(1)
-    private long quantity;
+    @NotNull
+    @DecimalMin(value = "0.00", message = "Quantity must be >= 0")
+    @Digits(integer = 13, fraction = 3, message = "Quantity must have at most 13 digits and 3 decimal places")
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantity;
 
     @NotNull
     @DecimalMin("0.00")
@@ -46,6 +48,7 @@ public class InvoiceItem {
     @PreUpdate
     void computeTotal() {
         if (unitPrice == null) return;
-        this.total = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal q = quantity == null ? BigDecimal.ZERO : quantity;
+        this.total = unitPrice.multiply(q);
     }
 }

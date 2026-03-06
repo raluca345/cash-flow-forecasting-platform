@@ -95,16 +95,16 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .taxAmount(new BigDecimal("3.45"))
+                .taxRatePercent(new BigDecimal("2.875"))
                 .items(List.of(
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Cable")
-                                .quantity(2)
+                                .quantity(new BigDecimal("2.000"))
                                 .unitPrice(new BigDecimal("60.00"))
                                 .build(),
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Install")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("0.00"))
                                 .build()
                 ))
@@ -123,15 +123,15 @@ class InvoiceServiceTest {
 
         assertEquals("INV-2026-00001", saved.getInvoiceNumber());
         assertEquals(clientId, saved.getClient().getId());
-        assertEquals(new BigDecimal("120.00"), saved.getSubtotal());
-        assertEquals(new BigDecimal("3.45"), saved.getTaxAmount());
-        assertEquals(new BigDecimal("123.45"), saved.getTotalAmount());
+        assertEquals(0, saved.getSubtotal().compareTo(new BigDecimal("120.00")));
+        assertEquals(0, saved.getTaxAmount().compareTo(new BigDecimal("3.45")));
+        assertEquals(0, saved.getTotalAmount().compareTo(new BigDecimal("123.45")));
         assertEquals("EUR", saved.getCurrency());
         assertEquals(new BigDecimal("1.200000"), saved.getExchangeRate());
 
         // base currency is computed from totalAmount
         BigDecimal expectedBase = saved.getTotalAmount().divide(new BigDecimal("1.200000"), 2, RoundingMode.HALF_UP);
-        assertEquals(expectedBase, saved.getAmountBaseCurrency());
+        assertEquals(0, expectedBase.compareTo(saved.getAmountBaseCurrency()));
         assertEquals(request.getIssueDate(), saved.getIssueDate());
         assertEquals(request.getDueDate(), saved.getDueDate());
         assertFalse(saved.isDeleted());
@@ -144,11 +144,11 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .taxAmount(BigDecimal.ZERO)
+                .taxRatePercent(BigDecimal.ZERO)
                 .items(List.of(
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Service")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("10.00"))
                                 .build()
                 ))
@@ -171,11 +171,11 @@ class InvoiceServiceTest {
         UUID clientId = UUID.randomUUID();
         CreateInvoiceRequest request = CreateInvoiceRequest.builder()
                 .clientId(clientId)
-                .taxAmount(BigDecimal.ZERO)
+                .taxRatePercent(BigDecimal.ZERO)
                 .items(List.of(
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Service")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("10.00"))
                                 .build()
                 ))
@@ -327,7 +327,7 @@ class InvoiceServiceTest {
         when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .taxAmount(new BigDecimal("10.00"))
+                .taxRatePercent(new BigDecimal("10.000"))
                 .build();
 
         UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
@@ -343,11 +343,11 @@ class InvoiceServiceTest {
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .taxAmount(new BigDecimal("0.00"))
+                .taxRatePercent(BigDecimal.ZERO)
                 .items(List.of(
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Updated")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("20.00"))
                                 .build()
                 ))
@@ -355,10 +355,11 @@ class InvoiceServiceTest {
 
         Invoice result = invoiceService.editInvoice("INV-1", request);
 
-        assertEquals(new BigDecimal("20.00"), result.getSubtotal());
-        assertEquals(new BigDecimal("20.00"), result.getTotalAmount());
+        assertEquals(0, result.getSubtotal().compareTo(new BigDecimal("20.00")));
+        assertEquals(0, result.getTaxAmount().compareTo(new BigDecimal("0.00")));
+        assertEquals(0, result.getTotalAmount().compareTo(new BigDecimal("20.00")));
         BigDecimal expectedBase = new BigDecimal("20.00").divide(invoice.getExchangeRate(), 2, RoundingMode.HALF_UP);
-        assertEquals(expectedBase, result.getAmountBaseCurrency());
+        assertEquals(0, expectedBase.compareTo(result.getAmountBaseCurrency()));
         verify(invoiceRepository).save(invoice);
     }
 
@@ -424,5 +425,57 @@ class InvoiceServiceTest {
         assertSame(expected, result);
         verify(invoiceRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Invoice>>any(), eq(pageable));
     }
-}
 
+    @Test
+    void editInvoice_whenItemsCleared_recalculatesSubtotalToZero_andTotalToTax() {
+        Invoice invoice = draftInvoice("INV-1");
+        invoice.setSubtotal(new BigDecimal("100.00"));
+        invoice.setTaxAmount(new BigDecimal("5.00"));
+        invoice.setTotalAmount(new BigDecimal("105.00"));
+
+        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
+                .taxRatePercent(new BigDecimal("10.000"))
+                .items(List.of())
+                .build();
+
+        Invoice result = invoiceService.editInvoice("INV-1", request);
+
+        assertEquals(0, result.getSubtotal().compareTo(new BigDecimal("0.00")));
+        assertEquals(0, result.getTaxAmount().compareTo(new BigDecimal("0.00")));
+        assertEquals(0, result.getTotalAmount().compareTo(new BigDecimal("0.00")));
+
+        BigDecimal expectedBase = result.getTotalAmount().divide(invoice.getExchangeRate(), 2, RoundingMode.HALF_UP);
+        assertEquals(0, expectedBase.compareTo(result.getAmountBaseCurrency()));
+
+        verify(invoiceRepository).save(invoice);
+    }
+
+    @Test
+    void editInvoice_whenTaxNull_recalculatesTreatingTaxAsZero() {
+        Invoice invoice = draftInvoice("INV-1");
+        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
+                .taxRatePercent(null)
+                .items(List.of(
+                        org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
+                                .description("Updated")
+                                .quantity(new BigDecimal("1.000"))
+                                .unitPrice(new BigDecimal("20.00"))
+                                .build()
+                ))
+                .build();
+
+        Invoice result = invoiceService.editInvoice("INV-1", request);
+
+        assertEquals(0, result.getSubtotal().compareTo(new BigDecimal("20.00")));
+        assertEquals(0, result.getTaxAmount().compareTo(new BigDecimal("0.00")));
+        assertEquals(0, result.getTotalAmount().compareTo(new BigDecimal("20.00")));
+
+        verify(invoiceRepository).save(invoice);
+    }
+}

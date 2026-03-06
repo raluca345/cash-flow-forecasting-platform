@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -110,6 +111,13 @@ public class Invoice extends BaseEntity{
     @Column(nullable = false)
     private boolean deleted = false;
 
+    @NotNull(message = "Tax rate is required")
+    @DecimalMin(value = "0.00", message = "Tax rate must be >= 0")
+    @DecimalMax(value = "100.00", message = "Tax rate must be <= 100")
+    @Digits(integer = 3, fraction = 3, message = "Tax rate must have at most 3 digits and 3 decimal places")
+    @Column(nullable = false, precision = 6, scale = 3)
+    private BigDecimal taxRatePercent;
+
     public void markAsSent() {
         if (status != InvoiceStatus.DRAFT) {
             throw new IllegalStateException("Only draft invoices can be sent");
@@ -169,19 +177,23 @@ public class Invoice extends BaseEntity{
         item.setInvoice(null);
     }
 
-    /**
-     * Optional convenience to keep header totals consistent with line items.
-     * Call from service layer when line items change.
-     */
+
     public void recalculateAmountFromItems() {
-        if (items == null || items.isEmpty()) return;
-        this.subtotal = items.stream()
-                .map(InvoiceItem::getTotal)
-                .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (this.taxAmount == null) {
-            this.taxAmount = BigDecimal.ZERO;
+        BigDecimal computedSubtotal = BigDecimal.ZERO;
+        if (items != null && !items.isEmpty()) {
+            computedSubtotal = items.stream()
+                    .map(InvoiceItem::getTotal)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
+
+        this.subtotal = computedSubtotal;
+
+        BigDecimal rate = this.taxRatePercent == null ? BigDecimal.ZERO : this.taxRatePercent;
+        this.taxAmount = this.subtotal
+                .multiply(rate)
+                .divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+
         this.totalAmount = this.subtotal.add(this.taxAmount);
     }
 

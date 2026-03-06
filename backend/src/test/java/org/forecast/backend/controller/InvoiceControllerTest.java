@@ -77,16 +77,16 @@ class InvoiceControllerTest {
     private static CreateInvoiceRequest validCreateInvoiceRequest() {
         return CreateInvoiceRequest.builder()
                 .clientId(UUID.randomUUID())
-                .taxAmount(new BigDecimal("2.34"))
+                .taxRatePercent(new BigDecimal("7.500"))
                 .items(List.of(
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Cable subscription")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("50.00"))
                                 .build(),
                         org.forecast.backend.dtos.CreateInvoiceItemRequest.builder()
                                 .description("Installation")
-                                .quantity(1)
+                                .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("30.00"))
                                 .build()
                 ))
@@ -121,7 +121,7 @@ class InvoiceControllerTest {
     void createInvoice_invalidBody_returnsValidationError() throws Exception {
         CreateInvoiceRequest invalidRequest = CreateInvoiceRequest.builder()
                 .clientId(null)
-                .taxAmount(new BigDecimal("-0.01"))
+                .taxRatePercent(new BigDecimal("-0.01"))
                 .items(List.of())
                 .currency("usd")
                 .issueDate(LocalDate.now().plusDays(1))
@@ -135,7 +135,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.fieldErrors.clientId").value("Client ID is required"))
-                .andExpect(jsonPath("$.fieldErrors.taxAmount").value("Tax amount must be >= 0"))
+                .andExpect(jsonPath("$.fieldErrors.taxRatePercent").value("Tax rate must be >= 0"))
                 .andExpect(jsonPath("$.fieldErrors.items").value("At least one item is required"))
                 .andExpect(jsonPath("$.fieldErrors.currency", anyOf(
                         is("Currency must be uppercase 3 letters (e.g. USD)"),
@@ -370,7 +370,7 @@ class InvoiceControllerTest {
     @Test
     void editInvoice_bodyValidationError_returns400() throws Exception {
         UpdateInvoiceDraftPartialRequest invalid = UpdateInvoiceDraftPartialRequest.builder()
-                .taxAmount(new BigDecimal("-0.01"))
+                .taxRatePercent(new BigDecimal("-0.01"))
                 .issueDate(LocalDate.now().plusDays(1))
                 .dueDate(LocalDate.now().minusDays(1))
                 .build();
@@ -380,7 +380,7 @@ class InvoiceControllerTest {
                         .content(objectMapper.writeValueAsString(invalid)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.fieldErrors.taxAmount").value("Tax amount must be >= 0"))
+                .andExpect(jsonPath("$.fieldErrors.taxRatePercent").value("Tax rate must be >= 0"))
                 .andExpect(jsonPath("$.fieldErrors.issueDate").value("Issue date cannot be in the future"))
                 .andExpect(jsonPath("$.fieldErrors.dueDate").value("Due date must be today or in the future"));
 
@@ -390,7 +390,7 @@ class InvoiceControllerTest {
     @Test
     void editInvoice_notFound_returns404() throws Exception {
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .taxAmount(new BigDecimal("10.00"))
+                .taxRatePercent(new BigDecimal("10.000"))
                 .build();
         when(invoiceService.editInvoice(eq("INV-404"), any(UpdateInvoiceDraftPartialRequest.class)))
                 .thenThrow(new ResourceNotFoundException("Invoice not found"));
@@ -407,7 +407,7 @@ class InvoiceControllerTest {
     @Test
     void editInvoice_illegalArgument_returns400() throws Exception {
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
-                .taxAmount(new BigDecimal("10.00"))
+                .taxRatePercent(new BigDecimal("10.000"))
                 .build();
         when(invoiceService.editInvoice(eq("INV-030"), any(UpdateInvoiceDraftPartialRequest.class)))
                 .thenThrow(new IllegalArgumentException("Not a draft"));
