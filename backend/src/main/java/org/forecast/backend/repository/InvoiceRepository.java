@@ -29,4 +29,11 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID>, JpaSpec
 
     @Query(value = "SELECT nextval('invoice_sequence')", nativeQuery = true)
     long getNextInvoiceSequence();
+
+    @Query("select distinct i from Invoice i " +
+            "join fetch i.company " +
+            "join fetch i.client " +
+            "left join fetch i.items " +
+            "where i.invoiceNumber = :invoiceNumber and i.deleted = false")
+    Optional<Invoice> findByInvoiceNumberForPdf(String invoiceNumber);
 }

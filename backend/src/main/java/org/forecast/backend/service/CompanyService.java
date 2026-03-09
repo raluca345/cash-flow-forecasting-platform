@@ -1,8 +1,8 @@
 package org.forecast.backend.service;
 
 import lombok.RequiredArgsConstructor;
-import org.forecast.backend.dtos.CreateCompanyRequest;
-import org.forecast.backend.dtos.UpdateCompanyRequest;
+import org.forecast.backend.dtos.company.CreateCompanyRequest;
+import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.repository.CompanyRepository;
@@ -19,15 +19,22 @@ public class CompanyService {
 
     public Company create(CreateCompanyRequest request) {
         Company company = new Company();
-        company.setName(request.getName());
-        company.setLogoUrl(request.getLogoUrl());
-        company.setAddress(request.getAddress());
-        company.setEmail(request.getEmail());
-        company.setPhone(request.getPhone());
-        company.setWebsite(request.getWebsite());
-        company.setIban(request.getIban());
-        company.setVatNumber(request.getVatNumber());
+        company.setName(requireNonBlank(request.getName(), "Company name is required"));
+        company.setLogoUrl(null);
+        company.setAddress(requireNonBlank(request.getAddress(), "Address is required"));
+        company.setEmail(requireNonBlank(request.getEmail(), "Email is required"));
+        company.setPhoneNumber(requireNonBlank(request.getPhoneNumber(), "Phone is required"));
+        company.setWebsite(requireNonBlank(request.getWebsite(), "Website is required"));
+        company.setIban(requireNonBlank(request.getIban(), "IBAN is required"));
+        company.setVatNumber(requireNonBlank(request.getVatNumber(), "VAT number is required"));
         return companyRepository.save(company);
+    }
+
+    private static String requireNonBlank(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value;
     }
 
     public List<Company> listAll() {
@@ -42,15 +49,21 @@ public class CompanyService {
     public Company update(UUID id, UpdateCompanyRequest request) {
         Company company = getById(id);
 
-        if (request.getName() != null) company.setName(request.getName());
-        if (request.getLogoUrl() != null) company.setLogoUrl(request.getLogoUrl());
-        if (request.getAddress() != null) company.setAddress(request.getAddress());
-        if (request.getEmail() != null) company.setEmail(request.getEmail());
-        if (request.getPhone() != null) company.setPhone(request.getPhone());
-        if (request.getWebsite() != null) company.setWebsite(request.getWebsite());
-        if (request.getIban() != null) company.setIban(request.getIban());
-        if (request.getVatNumber() != null) company.setVatNumber(request.getVatNumber());
+        if (request.getName() != null) company.setName(requireNonBlank(request.getName(), "Company name is required"));
+        if (request.getLogoUrl() != null) company.setLogoUrl(requireNonBlank(request.getLogoUrl(), "Logo URL is required"));
+        if (request.getAddress() != null) company.setAddress(requireNonBlank(request.getAddress(), "Address is required"));
+        if (request.getEmail() != null) company.setEmail(requireNonBlank(request.getEmail(), "Email is required"));
+        if (request.getPhone() != null) company.setPhoneNumber(requireNonBlank(request.getPhone(), "Phone is required"));
+        if (request.getWebsite() != null) company.setWebsite(requireNonBlank(request.getWebsite(), "Website is required"));
+        if (request.getIban() != null) company.setIban(requireNonBlank(request.getIban(), "IBAN is required"));
+        if (request.getVatNumber() != null) company.setVatNumber(requireNonBlank(request.getVatNumber(), "VAT number is required"));
 
+        return companyRepository.save(company);
+    }
+
+    public Company updateLogoUrl(UUID id, String logoUrl) {
+        Company company = getById(id);
+        company.setLogoUrl(logoUrl);
         return companyRepository.save(company);
     }
 }

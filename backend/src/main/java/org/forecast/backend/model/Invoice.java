@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -49,23 +48,26 @@ public class Invoice extends BaseEntity{
     )
     private List<InvoiceItem> items = new ArrayList<>();
 
-    @NotNull(message = "Subtotal is required")
-    @DecimalMin(value = "0.00", message = "Subtotal must be >= 0")
-    @Digits(integer = 13, fraction = 2, message = "Subtotal must have at most 13 digits and 2 decimal places")
+    /** Sum of item net amounts (excluding VAT). */
+    @NotNull(message = "Net total is required")
+    @DecimalMin(value = "0.00", message = "Net total must be >= 0")
+    @Digits(integer = 13, fraction = 2, message = "Net total must have at most 13 digits and 2 decimal places")
     @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal subtotal;
+    private BigDecimal netTotal;
 
+    /** Total VAT amount (sum of item VAT amounts). */
     @NotNull(message = "Tax amount is required")
     @DecimalMin(value = "0.00", message = "Tax amount must be >= 0")
     @Digits(integer = 13, fraction = 2, message = "Tax amount must have at most 13 digits and 2 decimal places")
     @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal taxAmount;
+    private BigDecimal vatTotal;
 
+    /** VAT-inclusive total. */
     @NotNull(message = "Total amount is required")
     @DecimalMin(value = "0.00", message = "Total amount must be >= 0")
     @Digits(integer = 13, fraction = 2, message = "Total amount must have at most 13 digits and 2 decimal places")
     @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal totalAmount;
+    private BigDecimal grossTotal;
 
 
     @NotBlank(message = "Currency is required")
@@ -110,13 +112,6 @@ public class Invoice extends BaseEntity{
 
     @Column(nullable = false)
     private boolean deleted = false;
-
-    @NotNull(message = "Tax rate is required")
-    @DecimalMin(value = "0.00", message = "Tax rate must be >= 0")
-    @DecimalMax(value = "100.00", message = "Tax rate must be <= 100")
-    @Digits(integer = 3, fraction = 3, message = "Tax rate must have at most 3 digits and 3 decimal places")
-    @Column(nullable = false, precision = 6, scale = 3)
-    private BigDecimal taxRatePercent;
 
     public void markAsSent() {
         if (status != InvoiceStatus.DRAFT) {
@@ -179,22 +174,27 @@ public class Invoice extends BaseEntity{
 
 
     public void recalculateAmountFromItems() {
-        BigDecimal computedSubtotal = BigDecimal.ZERO;
+        BigDecimal computedNet = BigDecimal.ZERO;
+        BigDecimal computedVat = BigDecimal.ZERO;
+
         if (items != null && !items.isEmpty()) {
-            computedSubtotal = items.stream()
-                    .map(InvoiceItem::getTotal)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            for (InvoiceItem item : items) {
+                if (item == null) continue;
+
+                // When not managed by JPA (e.g. in unit tests), @PrePersist/@PreUpdate won't run.
+                // Compute line totals explicitly so aggregates are consistent.
+                if (item.getNetAmount() == null || item.getGrossAmount() == null || item.getVatAmount() == null) {
+                    item.computeTotals();
+                }
+
+                if (item.getNetAmount() != null) computedNet = computedNet.add(item.getNetAmount());
+                if (item.getVatAmount() != null) computedVat = computedVat.add(item.getVatAmount());
+            }
         }
 
-        this.subtotal = computedSubtotal;
-
-        BigDecimal rate = this.taxRatePercent == null ? BigDecimal.ZERO : this.taxRatePercent;
-        this.taxAmount = this.subtotal
-                .multiply(rate)
-                .divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-
-        this.totalAmount = this.subtotal.add(this.taxAmount);
+        this.netTotal = computedNet.setScale(2, java.math.RoundingMode.HALF_UP);
+        this.vatTotal = computedVat.setScale(2, java.math.RoundingMode.HALF_UP);
+        this.grossTotal = this.netTotal.add(this.vatTotal).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
 }

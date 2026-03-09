@@ -1,8 +1,8 @@
 package org.forecast.backend.service;
 
-import org.forecast.backend.dtos.CreateInvoiceRequest;
-import org.forecast.backend.dtos.InvoiceSearchCriteria;
-import org.forecast.backend.dtos.UpdateInvoiceDraftPartialRequest;
+import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
+import org.forecast.backend.dtos.invoice.InvoiceSearchCriteria;
+import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
 import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.model.Invoice;
 import org.springframework.data.domain.Page;
@@ -15,6 +15,8 @@ public interface IInvoiceService {
 
     Invoice getInvoice(String invoiceNumber);
 
+
+    Invoice getInvoiceForPdf(String invoiceNumber);
 
     Page<Invoice> getAllInvoices(Pageable pageable);
 

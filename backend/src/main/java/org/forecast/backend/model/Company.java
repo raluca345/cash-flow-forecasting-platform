@@ -41,24 +41,28 @@ public class Company {
     private String logoUrl;
 
     @Size(max = 500, message = "Address must be at most 500 characters")
-    @Column(length = 500)
+    @NotBlank(message = "Address is required")
+    @Column(nullable = false, length = 500)
     private String address;
 
     @Email(message = "Email should be valid")
+    @NotBlank(message = "Email is required")
     @Size(max = 320, message = "Email must be at most 320 characters")
-    @Column(length = 320)
+    @Column(nullable = false, length = 320)
     private String email;
 
     /**
      * Pragmatic phone validation: allow +, digits, spaces, and common separators.
      */
-    @Size(max = 32, message = "Phone must be at most 32 characters")
-    @Pattern(regexp = "^[0-9+()\\-\\s]*$", message = "Phone contains invalid characters")
-    @Column(length = 32)
-    private String phone;
+    @NotBlank(message = "Phone number is required")
+    @Size(max = 32, message = "Phone number must be at most 32 characters")
+    @Pattern(regexp = "^[0-9+()\\-\\s]*$", message = "Phone number contains invalid characters")
+    @Column(nullable = false, length = 32)
+    private String phoneNumber;
 
     @Size(max = 2048, message = "Website URL must be at most 2048 characters")
-    @Column(length = 2048)
+    @NotBlank(message = "Website is required")
+    @Column(nullable = false, length = 2048)
     private String website;
 
     /**
@@ -66,22 +70,24 @@ public class Company {
      * You can store with spaces in UI but normalize before saving.
      */
     @Size(min = 15, max = 34, message = "IBAN must be between 15 and 34 characters")
+    @NotBlank(message = "IBAN is required")
     @Pattern(
             regexp = "[A-Z0-9]{15,34}",
             message = "IBAN must be uppercase alphanumeric with no spaces"
     )
-    @Column(length = 34)
+    @Column(nullable = false, length = 34)
     private String iban;
 
     /**
      * VAT number formats vary; this is a pragmatic constraint: 8-20 uppercase alphanumeric.
      */
     @Size(min = 8, max = 20, message = "VAT number must be between 8 and 20 characters")
+    @NotBlank(message = "VAT number is required")
     @Pattern(
             regexp = "[A-Z0-9]{8,20}",
             message = "VAT number must be uppercase alphanumeric with no spaces"
     )
-    @Column(name = "vat_number", length = 20)
+    @Column(name = "vat_number", nullable = false, length = 20)
     private String vatNumber;
 
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = false)

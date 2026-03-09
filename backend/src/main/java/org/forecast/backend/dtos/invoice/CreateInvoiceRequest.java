@@ -1,13 +1,19 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.invoice;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -21,14 +27,10 @@ public class CreateInvoiceRequest {
     @NotNull(message = "Client ID is required")
     private UUID clientId;
 
-    @NotNull(message = "Tax rate is required")
-    @DecimalMin(value = "0.00", message = "Tax rate must be >= 0")
-    @DecimalMax(value = "100.00", message = "Tax rate must be <= 100")
-    @Digits(integer = 3, fraction = 3, message = "Tax rate must have at most 3 digits and 3 decimal places")
-    private BigDecimal taxRatePercent;
+    @NotNull(message = "Company id is required")
+    private UUID companyId;
 
-    @NotNull(message = "Items are required")
-    @Size(min = 1, message = "At least one item is required")
+    @NotEmpty(message = "At least one item is required")
     @Valid
     private List<CreateInvoiceItemRequest> items;
 
@@ -39,9 +41,11 @@ public class CreateInvoiceRequest {
 
     @NotNull(message = "Issue date is required")
     @PastOrPresent(message = "Issue date cannot be in the future")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate issueDate;
 
     @NotNull(message = "Due date is required")
     @FutureOrPresent(message = "Due date must be today or in the future")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dueDate;
 }

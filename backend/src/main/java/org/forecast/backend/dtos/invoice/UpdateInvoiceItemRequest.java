@@ -1,5 +1,6 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.invoice;
 
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,10 @@ public class UpdateInvoiceItemRequest {
     @DecimalMin(value = "0.00", message = "Unit price must be >= 0")
     @Digits(integer = 13, fraction = 2, message = "Unit price must have at most 13 digits and 2 decimal places")
     private BigDecimal unitPrice;
+
+    @DecimalMin(value = "0.00", message = "VAT rate must be >= 0")
+    @DecimalMax(value = "100.00", message = "VAT rate must be <= 100")
+    @Digits(integer = 3, fraction = 3, message = "VAT rate must have at most 3 digits and 3 decimal places")
+    private BigDecimal vatRatePercent;
 }
+

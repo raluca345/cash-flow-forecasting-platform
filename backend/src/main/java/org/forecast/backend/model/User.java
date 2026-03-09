@@ -59,6 +59,10 @@ public class User {
     @Column(nullable = false, length = 50)
     private Role role;
 
+    @Size(max = 2048, message = "Profile picture URL must be at most 2048 characters")
+    @Column(length = 2048)
+    private String profilePictureUrl;
+
     @NotNull(message = "Company is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "company_id", nullable = false)

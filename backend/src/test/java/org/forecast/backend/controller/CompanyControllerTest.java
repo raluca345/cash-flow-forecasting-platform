@@ -3,10 +3,11 @@ package org.forecast.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.forecast.backend.config.GlobalExceptionHandler;
 import org.forecast.backend.config.TestConfig;
-import org.forecast.backend.dtos.CreateCompanyRequest;
-import org.forecast.backend.dtos.UpdateCompanyRequest;
+import org.forecast.backend.dtos.company.CreateCompanyRequest;
+import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Company;
+import org.forecast.backend.service.CompanyLogoStorageService;
 import org.forecast.backend.service.CompanyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +40,15 @@ class CompanyControllerTest {
     @MockitoBean
     private CompanyService companyService;
 
+    @MockitoBean
+    CompanyLogoStorageService companyLogoStorageService;
+
     private static Company company(UUID id) {
         Company c = new Company();
         c.setId(id);
         c.setName("Acme Cable");
         c.setEmail("info@acme.test");
-        c.setPhone("+1 555 0100");
+        c.setPhoneNumber("+1 555 0100");
         c.setWebsite("https://acme.test");
         c.setIban("DE89370400440532013000");
         c.setVatNumber("DE123456789");
@@ -68,19 +72,30 @@ class CompanyControllerTest {
         UUID id = UUID.randomUUID();
         CreateCompanyRequest req = CreateCompanyRequest.builder()
                 .name("Acme Cable")
+                .address("123 Main St, Berlin")
                 .email("info@acme.test")
-                .phone("+1 555 0100")
+                .phoneNumber("+49 30 1234567")
                 .website("https://acme.test")
+                .iban("DE89370400440532013000")
+                .vatNumber("DE123456789")
                 .build();
 
-        when(companyService.create(any(CreateCompanyRequest.class))).thenReturn(company(id));
+        Company created = company(id);
+        created.setLogoUrl(null);
+        created.setAddress(req.getAddress());
+        created.setPhoneNumber(req.getPhoneNumber());
+        created.setIban(req.getIban());
+        created.setVatNumber(req.getVatNumber());
+
+        when(companyService.create(any(CreateCompanyRequest.class))).thenReturn(created);
 
         mockMvc.perform(post("/api/v1/companies")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
-                .andExpect(jsonPath("$.email").value("info@acme.test"));
+                .andExpect(jsonPath("$.email").value("info@acme.test"))
+                .andExpect(jsonPath("$.phoneNumber").value("+49 30 1234567"));
 
         verify(companyService).create(any(CreateCompanyRequest.class));
     }
@@ -133,5 +148,45 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.email").value("support@acme.test"));
 
         verify(companyService).update(eq(id), any(UpdateCompanyRequest.class));
+    }
+
+    @Test
+    void uploadCompanyLogo_happyPath_returnsUpdatedCompany() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        Company updated = company(id);
+        updated.setLogoUrl("/uploads/company-logos/" + id + ".png");
+
+        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class)))
+                .thenReturn(updated.getLogoUrl());
+        when(companyService.updateLogoUrl(eq(id), eq(updated.getLogoUrl()))).thenReturn(updated);
+
+        mockMvc.perform(multipart("/api/v1/companies/{id}/logo", id)
+                        .file("file", "fake".getBytes())
+                        .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA)
+                        .characterEncoding("UTF-8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.logoUrl").value(updated.getLogoUrl()));
+
+        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class));
+        verify(companyService).updateLogoUrl(eq(id), eq(updated.getLogoUrl()));
+    }
+
+    @Test
+    void uploadCompanyLogo_storageRejectsFile_returns400() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class)))
+                .thenThrow(new IllegalArgumentException("Unsupported logo content type"));
+
+        mockMvc.perform(multipart("/api/v1/companies/{id}/logo", id)
+                        .file("file", "fake".getBytes())
+                        .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_ARGUMENT"));
+
+        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class));
+        verify(companyService, never()).updateLogoUrl(any(), any());
     }
 }

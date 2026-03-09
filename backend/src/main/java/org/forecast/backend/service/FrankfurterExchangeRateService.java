@@ -1,7 +1,7 @@
 package org.forecast.backend.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.forecast.backend.dtos.FrankfurterLatestResponse;
+import org.forecast.backend.dtos.exchange.FrankfurterLatestResponse;
 import org.forecast.backend.model.ExchangeRates;
 import org.forecast.backend.repository.ExchangeRatesRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +71,7 @@ public class FrankfurterExchangeRateService implements ExchangeRateService {
         String base = normalize(baseCurrency);
         FrankfurterLatestResponse latest = fetchLatest(base);
 
-        if (latest == null || latest.rates() == null || latest.rates().isEmpty()) {
+        if (latest.rates() == null || latest.rates().isEmpty()) {
             throw new IllegalStateException("Frankfurter API returned no rates");
         }
 

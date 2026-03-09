@@ -1,4 +1,4 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.invoice;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
@@ -24,9 +24,15 @@ public class InvoiceResponse {
     private String invoiceNumber;
     private String clientName;
 
-    private BigDecimal subtotal;
-    private BigDecimal taxAmount;
-    private BigDecimal totalAmount;
+    /** Sum of item net amounts (excluding VAT) */
+    private BigDecimal netTotal;
+
+    /** Total VAT amount (sum of item vatAmount) */
+    private BigDecimal vatTotal;
+
+    /** VAT-inclusive total (netTotal + vatTotal) */
+    private BigDecimal grossTotal;
+
     private String currency;
 
     private List<InvoiceItemResponse> items;
@@ -51,9 +57,9 @@ public class InvoiceResponse {
                 .id(invoice.getId())
                 .invoiceNumber(invoice.getInvoiceNumber())
                 .clientName(invoice.getClient().getName())
-                .subtotal(invoice.getSubtotal())
-                .taxAmount(invoice.getTaxAmount())
-                .totalAmount(invoice.getTotalAmount())
+                .netTotal(invoice.getNetTotal())
+                .vatTotal(invoice.getVatTotal())
+                .grossTotal(invoice.getGrossTotal())
                 .currency(invoice.getCurrency())
                 .items(invoice.getItems() == null ? List.of() : InvoiceItemResponse.fromEntities(invoice.getItems()))
                 .amountBaseCurrency(invoice.getAmountBaseCurrency())
@@ -72,3 +78,4 @@ public class InvoiceResponse {
                 .toList();
     }
 }
+

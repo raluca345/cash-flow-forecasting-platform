@@ -1,7 +1,7 @@
 package org.forecast.backend.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.forecast.backend.dtos.ErrorResponse;
+import org.forecast.backend.dtos.shared.ErrorResponse;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

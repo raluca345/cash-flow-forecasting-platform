@@ -41,12 +41,12 @@ public class InvoiceSpecifications {
 
   public static Specification<Invoice> amountGreaterThan(BigDecimal minAmount) {
     return (root, query, cb) ->
-        minAmount == null ? cb.conjunction() : cb.greaterThanOrEqualTo(root.get("totalAmount"), minAmount);
+        minAmount == null ? cb.conjunction() : cb.greaterThanOrEqualTo(root.get("grossTotal"), minAmount);
   }
 
   public static Specification<Invoice> amountLessThan(BigDecimal maxAmount) {
     return (root, query, cb) ->
-        maxAmount == null ? cb.conjunction() : cb.lessThanOrEqualTo(root.get("totalAmount"), maxAmount);
+        maxAmount == null ? cb.conjunction() : cb.lessThanOrEqualTo(root.get("grossTotal"), maxAmount);
   }
 
   public static Specification<Invoice> dueDateFrom(LocalDate dueDate) {

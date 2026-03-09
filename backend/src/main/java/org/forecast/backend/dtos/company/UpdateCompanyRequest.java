@@ -1,4 +1,4 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.company;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;

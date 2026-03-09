@@ -1,4 +1,4 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.invoice;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +21,15 @@ public class InvoiceItemResponse {
     private String description;
     private BigDecimal quantity;
     private BigDecimal unitPrice;
-    private BigDecimal total;
+
+    /** Line amount excluding VAT: unitPrice * quantity */
+    private BigDecimal netAmount;
+
+    private BigDecimal vatRatePercent;
+    private BigDecimal vatAmount;
+
+    /** Line amount including VAT: netAmount + vatAmount */
+    private BigDecimal grossAmount;
 
     public static InvoiceItemResponse fromEntity(InvoiceItem item) {
         return InvoiceItemResponse.builder()
@@ -29,7 +37,10 @@ public class InvoiceItemResponse {
                 .description(item.getDescription())
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
-                .total(item.getTotal())
+                .vatRatePercent(item.getVatRatePercent())
+                .vatAmount(item.getVatAmount())
+                .netAmount(item.getNetAmount())
+                .grossAmount(item.getGrossAmount())
                 .build();
     }
 
@@ -42,3 +53,4 @@ public class InvoiceItemResponse {
         return out;
     }
 }
+

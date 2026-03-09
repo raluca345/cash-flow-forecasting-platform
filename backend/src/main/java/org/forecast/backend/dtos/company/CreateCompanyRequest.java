@@ -1,4 +1,4 @@
-package org.forecast.backend.dtos;
+package org.forecast.backend.dtos.company;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -19,27 +19,30 @@ public class CreateCompanyRequest {
     @Size(min = 2, max = 255, message = "Company name must be between 2 and 255 characters")
     private String name;
 
-    @Size(max = 2048, message = "Logo URL must be at most 2048 characters")
-    private String logoUrl;
-
+    @NotBlank(message = "Address is required")
     @Size(max = 500, message = "Address must be at most 500 characters")
     private String address;
 
+    @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
     @Size(max = 320, message = "Email must be at most 320 characters")
     private String email;
 
+    @NotBlank(message = "Phone is required")
     @Size(max = 32, message = "Phone must be at most 32 characters")
     @Pattern(regexp = "^[0-9+()\\-\\s]*$", message = "Phone contains invalid characters")
-    private String phone;
+    private String phoneNumber;
 
+    @NotBlank(message = "Website is required")
     @Size(max = 2048, message = "Website URL must be at most 2048 characters")
     private String website;
 
+    @NotBlank(message = "IBAN is required")
     @Size(min = 15, max = 34, message = "IBAN must be between 15 and 34 characters")
     @Pattern(regexp = "[A-Z0-9]{15,34}", message = "IBAN must be uppercase alphanumeric with no spaces")
     private String iban;
 
+    @NotBlank(message = "VAT number is required")
     @Size(min = 8, max = 20, message = "VAT number must be between 8 and 20 characters")
     @Pattern(regexp = "[A-Z0-9]{8,20}", message = "VAT number must be uppercase alphanumeric with no spaces")
     private String vatNumber;

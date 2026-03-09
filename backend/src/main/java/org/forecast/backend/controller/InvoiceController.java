@@ -1,10 +1,16 @@
 package org.forecast.backend.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.forecast.backend.dtos.*;
+import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
+import org.forecast.backend.dtos.invoice.InvoiceResponse;
+import org.forecast.backend.dtos.invoice.InvoiceSearchCriteria;
+import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
+import org.forecast.backend.dtos.shared.PaginatedResponse;
 import org.forecast.backend.model.Invoice;
 import org.forecast.backend.service.IInvoiceService;
+import org.forecast.backend.service.InvoicePdfService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -18,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 public class InvoiceController {
 
     private final IInvoiceService invoiceService;
+
+    private final InvoicePdfService invoicePdfService;
 
     @PostMapping
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest createInvoiceRequest) {
@@ -83,5 +91,23 @@ public class InvoiceController {
                 InvoiceResponse.fromEntities(filteredInvoicePage.getContent())
         );
         return ResponseEntity.ok().body(response);
+    }
+
+
+    @GetMapping(value = "/{invoiceNumber}/pdf", produces = "application/pdf")
+    public ResponseEntity<byte[]> getInvoicePdf(@PathVariable String invoiceNumber,
+                                                @RequestParam(defaultValue = "false") boolean download,
+                                                HttpServletRequest request) {
+        byte[] pdf = invoicePdfService.generatePdf(invoiceNumber, request);
+
+        String disposition = download
+                ? "attachment; filename=invoice-" + invoiceNumber + ".pdf"
+                : "inline; filename=invoice-" + invoiceNumber + ".pdf";
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", disposition)
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(pdf);
     }
 }

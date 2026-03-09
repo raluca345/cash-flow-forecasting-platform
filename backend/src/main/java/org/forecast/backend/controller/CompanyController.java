@@ -2,13 +2,16 @@ package org.forecast.backend.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.forecast.backend.dtos.CreateCompanyRequest;
-import org.forecast.backend.dtos.CompanyResponse;
-import org.forecast.backend.dtos.UpdateCompanyRequest;
+import org.forecast.backend.dtos.company.CompanyResponse;
+import org.forecast.backend.dtos.company.CreateCompanyRequest;
+import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.model.Company;
+import org.forecast.backend.service.CompanyLogoStorageService;
 import org.forecast.backend.service.CompanyService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +22,8 @@ import java.util.UUID;
 public class CompanyController {
 
     private final CompanyService companyService;
+
+    private final CompanyLogoStorageService companyLogoStorageService;
 
     @GetMapping
     public ResponseEntity<List<CompanyResponse>> listCompanies() {
@@ -44,6 +49,16 @@ public class CompanyController {
             @Valid @RequestBody UpdateCompanyRequest request
     ) {
         Company updated = companyService.update(companyId, request);
+        return ResponseEntity.ok(CompanyResponse.fromEntity(updated));
+    }
+
+    @PostMapping(value = "/{companyId}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CompanyResponse> uploadCompanyLogo(
+            @PathVariable UUID companyId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        String logoUrl = companyLogoStorageService.storeCompanyLogo(companyId, file);
+        Company updated = companyService.updateLogoUrl(companyId, logoUrl);
         return ResponseEntity.ok(CompanyResponse.fromEntity(updated));
     }
 }

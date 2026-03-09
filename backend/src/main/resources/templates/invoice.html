@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/styles/invoice.css" />
+  <title>Invoice</title>
+</head>
+<body>
+
+<div>
+    <div class="top-section">
+        <div class="company-details">
+            <img th:if="${company.logoUrl != null and !#strings.isEmpty(company.logoUrl)}"
+                 th:src="${company.logoUrl}"
+                 alt="Company Logo"
+                 class="company-logo" />
+            <div th:text="${company.name}"></div>
+            <div th:text="${company.address}"></div>
+            <div>Info Phone Number: <b th:text="${company.phoneNumber}"></b></div>
+            <div>Email: <b th:text="${company.email}"></b></div>
+            <div>Website: <b th:text="${company.website}"></b></div>
+            <div>IBAN: <b th:text="${company.iban}"></b></div>
+            <div>VAT: <b th:text="${company.vatNumber}"></b></div>
+        </div>
+
+        <div class="client-details">
+            <div th:text="${client.name}"></div>
+            <div th:if="${client.phoneNumber != null}"
+                  th:text="${client.phoneNumber}"></div>
+            <div th:if="${client.email != null}"
+                  th:text="${client.email}"></div>
+            <div th:if="${client.vatNumber != null}">
+                VAT Number: <b th:text="${client.vatNumber}"></b>
+            </div>
+            <div th:text="${client.address}"></div>
+        </div>
+    </div>
+
+    <div class="invoice-details">
+        <div>Invoice Number: <b th:text="${invoice.invoiceNumber}"></b></div>
+        <div>Date: <b th:text="${#temporals.format(invoice.issueDate, 'dd MMM yyyy')}"></b></div>
+        <div>Due Date: <b th:text="${#temporals.format(invoice.dueDate, 'dd MMM yyyy')}"></b></div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="items-table">
+        <thead class="table-header">
+            <tr>
+                <th>#</th>
+                <th>Products and services</th>
+                <th>Qty.</th>
+                <th th:text="'Net Value (' + ${invoice.currency} + ')'">Net Value</th>
+                <th>VAT Rate</th>
+                <th th:text="'VAT Amount (' + ${invoice.currency} + ')'">VAT Amount</th>
+                <th th:text="'Total (' + ${invoice.currency} + ')'">Total</th>
+            </tr>
+        </thead>
+        <tbody class="table-body">
+            <tr th:each="item, iterStat : ${items}">
+                <td th:text="${iterStat.count}"></td>
+                <td th:text="${item.description}"></td>
+                <td th:text="${item.quantity}"></td>
+                <td th:text="${#numbers.formatDecimal(item.netAmount, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td th:text="${#numbers.formatDecimal(item.vatRatePercent, 1, 'POINT', 2, 'COMMA') + '%'}"></td>
+                <td th:text="${#numbers.formatDecimal(item.vatAmount, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td th:text="${#numbers.formatDecimal(item.grossAmount, 1, 'POINT', 2, 'COMMA')}"></td>
+            </tr>
+            <tr class="totals-row">
+                <td></td>
+                <td><b>Totals</b></td>
+                <td></td>
+                <td><b th:text="${#numbers.formatDecimal(invoice.netTotal, 1, 'POINT', 2, 'COMMA')}"></b></td>
+                <td></td>
+                <td><b th:text="${#numbers.formatDecimal(invoice.vatTotal, 1, 'POINT', 2, 'COMMA')}"></b></td>
+                <td><b th:text="${#numbers.formatDecimal(invoice.grossTotal, 1, 'POINT', 2, 'COMMA')}"></b></td>
+            </tr>
+        </tbody>
+        <tfoot class="table-footer">
+            <tr>
+                <td colspan="7" class="thank-you">Thank you for your business!</td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+</div>
+
+</body>
+</html>
+
