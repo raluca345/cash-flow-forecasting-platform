@@ -27,7 +27,6 @@ public class CreateInvoiceRequest {
     @NotNull(message = "Client ID is required")
     private UUID clientId;
 
-    @NotNull(message = "Company id is required")
     private UUID companyId;
 
     @NotEmpty(message = "At least one item is required")

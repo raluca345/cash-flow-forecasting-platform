@@ -24,7 +24,7 @@ public class UpdateCompanyRequest {
     private String address;
 
     @Email(message = "Email should be valid")
-    @Size(max = 320, message = "Email must be at most 320 characters")
+    @Size(max = 100, message = "Email must be at most 100 characters")
     private String email;
 
     @Size(max = 32, message = "Phone must be at most 32 characters")

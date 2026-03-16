@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,24 +25,28 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginatedResponse<ClientResponse>> listClients(
             @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(ClientResponse.toPaginatedResponse(clientService.listAll(pageable)));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ClientResponse> createClient(@Valid @RequestBody CreateClientRequest request) {
         Client created = clientService.create(request);
         return ResponseEntity.ok(ClientResponse.fromEntity(created));
     }
 
     @GetMapping("/{clientId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ClientResponse> getClient(@PathVariable UUID clientId) {
         Client client = clientService.get(clientId);
         return ResponseEntity.ok(ClientResponse.fromEntity(client));
     }
 
     @PatchMapping("/{clientId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ClientResponse> updateClient(
             @PathVariable UUID clientId,
             @Valid @RequestBody UpdateClientRequest request

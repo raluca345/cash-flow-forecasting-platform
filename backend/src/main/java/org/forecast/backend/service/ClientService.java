@@ -5,7 +5,9 @@ import org.forecast.backend.dtos.client.CreateClientRequest;
 import org.forecast.backend.dtos.client.UpdateClientRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Client;
+import org.forecast.backend.model.Company;
 import org.forecast.backend.repository.ClientRepository;
+import org.forecast.backend.repository.CompanyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ import java.util.UUID;
 public class ClientService implements  IClientService {
 
     private final ClientRepository clientRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanySecurityService companySecurityService;
 
     @Override
     public Client create(CreateClientRequest request) {
@@ -27,19 +31,42 @@ public class ClientService implements  IClientService {
         client.setPhoneNumber(request.getPhoneNumber());
         client.setVatNumber(request.getVatNumber());
         client.setAddress(request.getAddress());
+
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            Company company = companyRepository.findById(currentCompanyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("No company with id " + currentCompanyId + " found."));
+            client.setCompany(company);
+        }
+
         return clientRepository.save(client);
     }
 
     @Override
     public Client get(UUID clientId) {
-        return clientRepository.findById(clientId).orElseThrow(() -> new ResourceNotFoundException("Client not found"));
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            return clientRepository.findByIdAndCompanyId(clientId, currentCompanyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
+        }
+
+        return clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
     }
 
     public List<Client> listAll() {
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            return clientRepository.findByCompanyId(currentCompanyId);
+        }
         return clientRepository.findAll();
     }
 
     public Page<Client> listAll(Pageable pageable) {
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            return clientRepository.findByCompanyId(currentCompanyId, pageable);
+        }
         return clientRepository.findAll(pageable);
     }
 

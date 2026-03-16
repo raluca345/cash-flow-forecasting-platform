@@ -52,6 +52,7 @@ cmake-build-*/
 
 # IntelliJ
 out/
+*.iml
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
@@ -145,3 +146,16 @@ sketch
 # Ignore all local history of files
 .history
 .ionide
+
+### Project-local ###
+.env
+.gradle/
+build/
+uploads/
+AGENTS.md
+backend/src/test/resources/application-test.properties
+backend/.idea/*
+!backend/.idea/codeStyles
+!backend/.idea/codeStyles/**
+!backend/.idea/runConfigurations
+!backend/.idea/runConfigurations/**

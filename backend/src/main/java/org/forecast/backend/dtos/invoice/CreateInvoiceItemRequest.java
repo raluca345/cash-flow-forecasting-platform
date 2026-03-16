@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import org.forecast.backend.enums.LineItemType;
 
 @Data
 @NoArgsConstructor
@@ -20,6 +21,8 @@ public class CreateInvoiceItemRequest {
 
     @NotBlank(message = "Description is required")
     private String description;
+
+    private LineItemType type;
 
     @NotNull(message = "Quantity is required")
     @DecimalMin(value = "0.00", message = "Quantity must be >= 0")

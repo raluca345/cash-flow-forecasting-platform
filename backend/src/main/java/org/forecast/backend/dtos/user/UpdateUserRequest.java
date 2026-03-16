@@ -17,7 +17,7 @@ public class UpdateUserRequest {
     private String name;
 
     @Email(message = "Email should be valid")
-    @Size(max = 320, message = "Email must be at most 320 characters")
+    @Size(max = 100, message = "Email must be at most 100 characters")
     private String email;
 
     @Size(max = 2048, message = "Profile picture URL must be at most 2048 characters")

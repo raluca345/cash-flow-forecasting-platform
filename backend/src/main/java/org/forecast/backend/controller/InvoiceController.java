@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -28,18 +29,21 @@ public class InvoiceController {
     private final InvoicePdfService invoicePdfService;
 
     @PostMapping
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest createInvoiceRequest) {
         Invoice invoice = invoiceService.createInvoice(createInvoiceRequest);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
     @GetMapping("/{invoiceNumber}")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.getInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<PaginatedResponse<InvoiceResponse>> getAllInvoices(
             @PageableDefault(size = 10, page = 0, sort = "issueDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<Invoice> invoicePage = invoiceService.getAllInvoices(pageable);
@@ -51,30 +55,35 @@ public class InvoiceController {
     }
 
     @PatchMapping("{invoiceNumber}/send")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> sendInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.sendInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
     @PatchMapping("{invoiceNumber}/pay")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> payInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.payInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
     @DeleteMapping("/{invoiceNumber}")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<Void> deleteInvoiceDraft(@PathVariable String invoiceNumber) {
         invoiceService.deleteInvoice(invoiceNumber);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("{invoiceNumber}/cancel")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> cancelInvoice(@PathVariable String invoiceNumber) {
         Invoice invoice = invoiceService.cancelInvoice(invoiceNumber);
         return ResponseEntity.ok().body(InvoiceResponse.fromEntity(invoice));
     }
 
     @PatchMapping("{invoiceNumber}")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<InvoiceResponse> editInvoice(@PathVariable String invoiceNumber,
                                                        @Valid @RequestBody UpdateInvoiceDraftPartialRequest request) {
         Invoice invoice = invoiceService.editInvoice(invoiceNumber, request);
@@ -82,6 +91,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<PaginatedResponse<InvoiceResponse>> filterInvoices(
             @ModelAttribute InvoiceSearchCriteria criteria,
             @PageableDefault(size = 10, page = 0, sort = "issueDate", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -95,6 +105,7 @@ public class InvoiceController {
 
 
     @GetMapping(value = "/{invoiceNumber}/pdf", produces = "application/pdf")
+    @PreAuthorize("hasRole('FINANCE')")
     public ResponseEntity<byte[]> getInvoicePdf(@PathVariable String invoiceNumber,
                                                 @RequestParam(defaultValue = "false") boolean download,
                                                 HttpServletRequest request) {

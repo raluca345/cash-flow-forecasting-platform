@@ -11,7 +11,12 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "clients")
+@Table(
+        name = "clients",
+        indexes = {
+                @Index(name = "idx_client_company", columnList = "company_id")
+        }
+)
 @Getter
 @Setter
 public class Client {
@@ -25,8 +30,8 @@ public class Client {
     private String name;
 
     @Email(message = "Email should be valid")
-    @Size(max = 320, message = "Email must be at most 320 characters")
-    @Column(length = 320)
+    @Size(max = 100, message = "Email must be at most 100 characters")
+    @Column(length = 100)
     private String email;
 
     /**
@@ -47,6 +52,10 @@ public class Client {
     )
     @Column(name = "vat_number", length = 20)
     private String vatNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     private String address;
 }

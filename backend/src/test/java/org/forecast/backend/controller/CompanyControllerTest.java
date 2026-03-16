@@ -1,8 +1,7 @@
 package org.forecast.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.forecast.backend.config.GlobalExceptionHandler;
-import org.forecast.backend.config.TestConfig;
+import org.forecast.backend.testing.WebMvcTestWithTestSecurity;
 import org.forecast.backend.dtos.company.CreateCompanyRequest;
 import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
@@ -12,8 +11,8 @@ import org.forecast.backend.service.CompanyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = CompanyController.class)
-@Import({GlobalExceptionHandler.class, TestConfig.class})
+@WebMvcTestWithTestSecurity
 class CompanyControllerTest {
 
     @Autowired
@@ -157,19 +156,19 @@ class CompanyControllerTest {
         Company updated = company(id);
         updated.setLogoUrl("/uploads/company-logos/" + id + ".png");
 
-        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class)))
+        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(MultipartFile.class)))
                 .thenReturn(updated.getLogoUrl());
         when(companyService.updateLogoUrl(eq(id), eq(updated.getLogoUrl()))).thenReturn(updated);
 
         mockMvc.perform(multipart("/api/v1/companies/{id}/logo", id)
                         .file("file", "fake".getBytes())
-                        .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA)
+                                .contentType(MediaType.MULTIPART_FORM_DATA)
                         .characterEncoding("UTF-8"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.logoUrl").value(updated.getLogoUrl()));
 
-        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class));
+        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(MultipartFile.class));
         verify(companyService).updateLogoUrl(eq(id), eq(updated.getLogoUrl()));
     }
 
@@ -177,7 +176,7 @@ class CompanyControllerTest {
     void uploadCompanyLogo_storageRejectsFile_returns400() throws Exception {
         UUID id = UUID.randomUUID();
 
-        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class)))
+        when(companyLogoStorageService.storeCompanyLogo(eq(id), any(MultipartFile.class)))
                 .thenThrow(new IllegalArgumentException("Unsupported logo content type"));
 
         mockMvc.perform(multipart("/api/v1/companies/{id}/logo", id)
@@ -186,7 +185,7 @@ class CompanyControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_ARGUMENT"));
 
-        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(org.springframework.web.multipart.MultipartFile.class));
+        verify(companyLogoStorageService).storeCompanyLogo(eq(id), any(MultipartFile.class));
         verify(companyService, never()).updateLogoUrl(any(), any());
     }
 }

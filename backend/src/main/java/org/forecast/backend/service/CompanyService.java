@@ -6,8 +6,13 @@ import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.repository.CompanyRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +21,10 @@ import java.util.UUID;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final CompanySecurityService companySecurityService;
+
+    @Value("${app.invite.ttl.hours:168}")
+    private long inviteTtlHours = 168;
 
     public Company create(CreateCompanyRequest request) {
         Company company = new Company();
@@ -38,12 +47,23 @@ public class CompanyService {
     }
 
     public List<Company> listAll() {
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            return List.of(getById(currentCompanyId));
+        }
         return companyRepository.findAll();
     }
 
     public Company getById(UUID id) {
-        return companyRepository.findById(id)
+        Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No company with id " + id + " found."));
+
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null && !currentCompanyId.equals(company.getId())) {
+            throw new AccessDeniedException("Cannot access another company");
+        }
+
+        return company;
     }
 
     public Company update(UUID id, UpdateCompanyRequest request) {
@@ -65,5 +85,35 @@ public class CompanyService {
         Company company = getById(id);
         company.setLogoUrl(logoUrl);
         return companyRepository.save(company);
+    }
+
+    /**
+     * Generate and persist an invite code for the given company. Only admins should call this.
+     * This method will retry a few times if the randomly generated code collides with an existing one.
+     */
+    public String generateInviteCode(UUID companyId) {
+        Company company = getById(companyId);
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = randomAlphaNumeric();
+            company.setInviteCode(code);
+            company.setInviteCodeExpiresAt(Instant.now().plusSeconds(inviteTtlHours * 3600));
+            try {
+                companyRepository.save(company);
+                return code;
+            } catch (DataIntegrityViolationException e) {
+                // likely invite_code unique constraint collision; try again
+            }
+        }
+
+        throw new IllegalStateException("Unable to generate unique invite code after multiple attempts");
+    }
+
+    private static String randomAlphaNumeric() {
+        String chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // avoid ambiguous chars
+        SecureRandom rnd = new SecureRandom();
+        StringBuilder sb = new StringBuilder(8);
+        for (int i = 0; i < 8; i++) sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        return sb.toString();
     }
 }

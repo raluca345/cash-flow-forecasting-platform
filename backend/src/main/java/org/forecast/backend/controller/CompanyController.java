@@ -8,8 +8,10 @@ import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.service.CompanyLogoStorageService;
 import org.forecast.backend.service.CompanyService;
+import org.forecast.backend.dtos.company.InviteCodeResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,24 +28,36 @@ public class CompanyController {
     private final CompanyLogoStorageService companyLogoStorageService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CompanyResponse>> listCompanies() {
         List<Company> companies = companyService.listAll();
         return ResponseEntity.ok(companies.stream().map(CompanyResponse::fromEntity).toList());
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CreateCompanyRequest request) {
         Company created = companyService.create(request);
         return ResponseEntity.ok(CompanyResponse.fromEntity(created));
     }
 
+    @PostMapping("/{companyId}/invite")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InviteCodeResponse> generateInviteCode(@PathVariable UUID companyId) {
+        String code = companyService.generateInviteCode(companyId);
+        var company = companyService.getById(companyId);
+        return ResponseEntity.ok(new InviteCodeResponse(code, company.getInviteCodeExpiresAt()));
+    }
+
     @GetMapping("/{companyId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponse> getCompany(@PathVariable UUID companyId) {
         Company company = companyService.getById(companyId);
         return ResponseEntity.ok(CompanyResponse.fromEntity(company));
     }
 
     @PatchMapping("/{companyId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable UUID companyId,
             @Valid @RequestBody UpdateCompanyRequest request
@@ -53,6 +67,7 @@ public class CompanyController {
     }
 
     @PostMapping(value = "/{companyId}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponse> uploadCompanyLogo(
             @PathVariable UUID companyId,
             @RequestPart("file") MultipartFile file

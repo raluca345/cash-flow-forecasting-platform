@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.forecast.backend.enums.InvoiceStatus;
+import org.forecast.backend.dtos.shared.LineItemResponse;
 import org.forecast.backend.model.Invoice;
 
 import java.math.BigDecimal;
@@ -35,7 +36,7 @@ public class InvoiceResponse {
 
     private String currency;
 
-    private List<InvoiceItemResponse> items;
+    private List<LineItemResponse> items;
 
     private BigDecimal amountBaseCurrency;
     private BigDecimal exchangeRate;
@@ -61,7 +62,7 @@ public class InvoiceResponse {
                 .vatTotal(invoice.getVatTotal())
                 .grossTotal(invoice.getGrossTotal())
                 .currency(invoice.getCurrency())
-                .items(invoice.getItems() == null ? List.of() : InvoiceItemResponse.fromEntities(invoice.getItems()))
+                .items(invoice.getItems() == null ? List.of() : LineItemResponse.fromEntities(invoice.getItems()))
                 .amountBaseCurrency(invoice.getAmountBaseCurrency())
                 .exchangeRate(invoice.getExchangeRate())
                 .issueDate(invoice.getIssueDate())

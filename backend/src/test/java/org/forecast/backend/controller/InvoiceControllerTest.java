@@ -1,9 +1,9 @@
 package org.forecast.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.forecast.backend.config.GlobalExceptionHandler;
-import org.forecast.backend.config.TestConfig;
+import org.forecast.backend.testing.WebMvcTestWithTestSecurity;
 import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
+import org.forecast.backend.dtos.invoice.CreateInvoiceItemRequest;
 import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
 import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
@@ -11,18 +11,19 @@ import org.forecast.backend.model.Client;
 import org.forecast.backend.model.Invoice;
 import org.forecast.backend.service.IInvoiceService;
 import org.forecast.backend.service.InvoicePdfService;
+import org.forecast.backend.service.JwtService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -39,7 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = InvoiceController.class)
-@Import({GlobalExceptionHandler.class, TestConfig.class})
+@WebMvcTestWithTestSecurity
 class InvoiceControllerTest {
 
     @Autowired
@@ -53,6 +54,12 @@ class InvoiceControllerTest {
 
     @MockitoBean
     private InvoicePdfService invoicePdfService;
+
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     private static Invoice sampleInvoice(String invoiceNumber) {
         Client client = new Client();
@@ -83,13 +90,13 @@ class InvoiceControllerTest {
                 .companyId(UUID.randomUUID())
                 .clientId(UUID.randomUUID())
                 .items(List.of(
-                        org.forecast.backend.dtos.invoice.CreateInvoiceItemRequest.builder()
+                        CreateInvoiceItemRequest.builder()
                                 .description("Cable subscription")
                                 .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("50.00"))
                                 .vatRatePercent(new BigDecimal("7.500"))
                                 .build(),
-                        org.forecast.backend.dtos.invoice.CreateInvoiceItemRequest.builder()
+                        CreateInvoiceItemRequest.builder()
                                 .description("Installation")
                                 .quantity(new BigDecimal("1.000"))
                                 .unitPrice(new BigDecimal("30.00"))
@@ -163,6 +170,20 @@ class InvoiceControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_ARGUMENT"))
                 .andExpect(jsonPath("$.message").value("Bad currency"));
+    }
+
+    @Test
+    void createInvoice_serviceThrowsIllegalState_returns409() throws Exception {
+        CreateInvoiceRequest request = validCreateInvoiceRequest();
+        when(invoiceService.createInvoice(any(CreateInvoiceRequest.class)))
+                .thenThrow(new IllegalStateException("FX rates unavailable"));
+
+        mockMvc.perform(post("/api/v1/invoices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("INVALID_STATE"))
+                .andExpect(jsonPath("$.message").value("FX rates unavailable"));
     }
 
     @Test
@@ -454,6 +475,19 @@ class InvoiceControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_ARGUMENT"))
                 .andExpect(jsonPath("$.message").value("Cannot delete"));
+
+        verify(invoiceService).deleteInvoice("INV-001");
+    }
+
+    @Test
+    void deleteInvoice_unsupportedOperation_returns409() throws Exception {
+        doThrow(new UnsupportedOperationException("Only drafts can be deleted."))
+                .when(invoiceService).deleteInvoice("INV-001");
+
+        mockMvc.perform(delete("/api/v1/invoices/INV-001"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("INVALID_OPERATION"))
+                .andExpect(jsonPath("$.message").value("Only drafts can be deleted."));
 
         verify(invoiceService).deleteInvoice("INV-001");
     }

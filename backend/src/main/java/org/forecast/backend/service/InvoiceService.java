@@ -10,15 +10,16 @@ import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Client;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.model.Invoice;
-import org.forecast.backend.model.InvoiceItem;
 import org.forecast.backend.repository.CompanyRepository;
 import org.forecast.backend.repository.InvoiceRepository;
 import org.forecast.backend.util.InvoiceNumberGenerator;
+import org.forecast.backend.util.LineItemFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.forecast.backend.specifications.InvoiceSpecifications.*;
 
@@ -41,23 +43,78 @@ public class InvoiceService implements IInvoiceService{
     private final ClientService clientService;
     private final ExchangeRateService exchangeRateService;
     private final CompanyRepository companyRepository;
+    private final CompanySecurityService companySecurityService;
 
     @Value("${app.currency.base:USD}")
     private String baseCurrency;
 
-    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+    private UUID requireCompanyId(String notFoundMessage) {
+        UUID currentCompany = companySecurityService.getCurrentCompanyId();
+        if (currentCompany == null) {
+            throw new ResourceNotFoundException(notFoundMessage);
+        }
+        return currentCompany;
+    }
+
+    private UUID requireAuthenticatedCompanyId(String message) {
+        UUID currentCompany = companySecurityService.getCurrentCompanyId();
+        if (currentCompany == null) {
+            throw new AccessDeniedException(message);
+        }
+        return currentCompany;
+    }
+
+    private void processOverdueInvoicesForCompany(UUID companyId, LocalDate today, List<InvoiceStatus> eligibleStatuses) {
+        int pageSize = 100;
+        int processedForCompany = 0;
+
+        while (true) {
+            Pageable pageable = PageRequest.of(0, pageSize);
+            Page<Invoice> page = invoiceRepository.findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(
+                    companyId,
+                    eligibleStatuses,
+                    today,
+                    pageable
+            );
+
+            List<Invoice> overdueInvoices = page.getContent();
+            if (overdueInvoices.isEmpty()) {
+                break;
+            }
+
+            for (Invoice invoice : overdueInvoices) {
+                invoice.markOverdue(today);
+                processedForCompany++;
+            }
+
+            invoiceRepository.saveAll(overdueInvoices);
+            log.info("Processed {} overdue invoices for company {}", overdueInvoices.size(), companyId);
+        }
+
+        if (processedForCompany > 0) {
+            log.info("Completed overdue processing for company {}. Total processed: {}", companyId, processedForCompany);
+        }
+    }
 
     @Override
     public Invoice createInvoice(CreateInvoiceRequest request) {
 
+        UUID currentCompanyId = requireAuthenticatedCompanyId("Company context required");
+        if (request.getCompanyId() != null && !currentCompanyId.equals(request.getCompanyId())) {
+            throw new AccessDeniedException("Invoices can only be created in the authenticated company");
+        }
+
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber(invoiceNumberGenerator.generateInvoiceNumber());
 
-        Company company = companyRepository.findById(request.getCompanyId())
-                .orElseThrow(() -> new ResourceNotFoundException("No company with id " + request.getCompanyId() + " found."));
+        Company company = companyRepository.findById(currentCompanyId)
+                .orElseThrow(() -> new ResourceNotFoundException("No company with id " + currentCompanyId + " found."));
         invoice.setCompany(company);
 
         Client client = clientService.get(request.getClientId());
+        if (client.getCompany() == null || !currentCompanyId.equals(client.getCompany().getId())) {
+            throw new AccessDeniedException("Client does not belong to the authenticated company");
+        }
         invoice.setClient(client);
         invoice.setCurrency(request.getCurrency().toUpperCase());
 
@@ -66,12 +123,7 @@ public class InvoiceService implements IInvoiceService{
         if (request.getItems() != null) {
             for (var itemReq : request.getItems()) {
                 if (itemReq == null) continue;
-                InvoiceItem item = new InvoiceItem();
-                item.setDescription(itemReq.getDescription());
-                item.setQuantity(itemReq.getQuantity());
-                item.setUnitPrice(itemReq.getUnitPrice());
-                item.setVatRatePercent(itemReq.getVatRatePercent());
-                invoice.addItem(item);
+                invoice.addItem(LineItemFactory.toInvoiceItem(itemReq));
             }
         }
 
@@ -92,40 +144,29 @@ public class InvoiceService implements IInvoiceService{
 
         invoice.setIssueDate(request.getIssueDate());
         invoice.setDueDate(request.getDueDate());
-        invoice.setDeleted(false);
 
         return invoiceRepository.save(invoice);
     }
 
     @Override
     public Invoice getInvoice(String invoiceNumber) {
-        return invoiceRepository.findByInvoiceNumberAndDeletedFalse(invoiceNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("No invoice with the number " + invoiceNumber + " " +
-                        "found."));
+        UUID currentCompany = requireCompanyId("No invoice with the number " + invoiceNumber + " found.");
+        return invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse(invoiceNumber, currentCompany)
+                .orElseThrow(() -> new ResourceNotFoundException("No invoice with the number " + invoiceNumber + " found."));
     }
 
     @Transactional(readOnly = true)
     @Override
     public Invoice getInvoiceForPdf(String invoiceNumber) {
-        return invoiceRepository.findByInvoiceNumberForPdf(invoiceNumber)
+        UUID currentCompany = requireCompanyId("No invoice with the number " + invoiceNumber + " found.");
+        return invoiceRepository.findByInvoiceNumberForPdfAndCompanyId(invoiceNumber, currentCompany)
                 .orElseThrow(() -> new ResourceNotFoundException("No invoice with the number " + invoiceNumber + " found."));
     }
 
     @Override
     public Page<Invoice> getAllInvoices(Pageable pageable) {
-        return invoiceRepository.findByDeletedFalseOrderByIssueDateDesc(pageable);
-    }
-
-    @Override
-    public List<Invoice> getOpenInvoicesByStatus() {
-        Pageable pageable = PageRequest.of(0, 10);
-        return invoiceRepository.findByDeletedFalse(pageable).toList();
-    }
-
-    @Override
-    public List<Invoice> getOpenInvoicesByStatus(InvoiceStatus status) {
-        Pageable pageable = PageRequest.of(0, 10);
-        return invoiceRepository.findByStatusAndDeletedFalse(status, pageable);
+        UUID currentCompany = requireCompanyId("Invoice fetching failed");
+        return invoiceRepository.findByCompanyIdAndDeletedFalseOrderByIssueDateDesc(currentCompany, pageable);
     }
 
     @Override
@@ -175,12 +216,7 @@ public class InvoiceService implements IInvoiceService{
             invoice.getItems().clear();
             for (var itemReq : request.getItems()) {
                 if (itemReq == null) continue;
-                InvoiceItem item = new InvoiceItem();
-                item.setDescription(itemReq.getDescription());
-                item.setQuantity(itemReq.getQuantity());
-                item.setUnitPrice(itemReq.getUnitPrice());
-                item.setVatRatePercent(itemReq.getVatRatePercent());
-                invoice.addItem(item);
+                invoice.addItem(LineItemFactory.toInvoiceItem(itemReq));
             }
         }
 
@@ -207,41 +243,28 @@ public class InvoiceService implements IInvoiceService{
     public void markOverdueInvoices() {
         LocalDate today = LocalDate.now();
         List<InvoiceStatus> eligibleStatuses = List.of(InvoiceStatus.SENT);
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null) {
+            processOverdueInvoicesForCompany(currentCompanyId, today, eligibleStatuses);
+            return;
+        }
 
-        int pageSize = 100;
-        int pageNumber = 0;
-        int totalProcessed = 0;
-
-        Page<Invoice> page;
-
-        do {
-            Pageable pageable = PageRequest.of(pageNumber, pageSize);
-            page = invoiceRepository.findByStatusInAndDueDateBeforeAndDeletedFalse(
-                    eligibleStatuses,
-                    today,
-                    pageable
-            );
-
-            List<Invoice> overdueInvoices = page.getContent();
-
-            for (Invoice invoice : overdueInvoices) {
-                invoice.markOverdue(today);
-                totalProcessed++;
-            }
-
-            invoiceRepository.saveAll(overdueInvoices);
-            pageNumber++;
-            log.info("Processed page {} of overdue invoices. Count: {}", pageNumber, overdueInvoices.size());
-
-        } while (page.hasNext());
-
-        log.info("Completed marking overdue invoices. Total processed: {}", totalProcessed);
+        List<Company> companies = companyRepository.findAll();
+        for (Company company : companies) {
+            processOverdueInvoicesForCompany(company.getId(), today, eligibleStatuses);
+        }
     }
 
     @Override
     public Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable) {
+        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
+        if (currentCompanyId != null && criteria.getCompanyId() != null && !currentCompanyId.equals(criteria.getCompanyId())) {
+            throw new AccessDeniedException("Invoices can only be queried in the authenticated company");
+        }
+
         Specification<Invoice> spec = Specification
-                .where(notDeleted())
+                .where(currentCompanyId != null ? hasCompanyId(currentCompanyId) : hasCompanyId(criteria.getCompanyId()))
+                .and(notDeleted())
                 .and(hasStatus(criteria.getStatus()))
                 .and(hasClientId(criteria.getClientId()))
                 .and(clientNameContains(criteria.getClientName()))

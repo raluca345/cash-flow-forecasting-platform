@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -47,8 +48,8 @@ public class Company {
 
     @Email(message = "Email should be valid")
     @NotBlank(message = "Email is required")
-    @Size(max = 320, message = "Email must be at most 320 characters")
-    @Column(nullable = false, length = 320)
+    @Size(max = 100, message = "Email must be at most 100 characters")
+    @Column(nullable = false, length = 100)
     private String email;
 
     /**
@@ -93,4 +94,11 @@ public class Company {
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = false)
     @JsonManagedReference
     private List<User> users = new ArrayList<>();
+
+    @Size(max = 64, message = "Invite code must be at most 64 characters")
+    @Column(name = "invite_code", length = 64, unique = true)
+    private String inviteCode;
+
+    @Column(name = "invite_code_expires_at")
+    private Instant inviteCodeExpiresAt;
 }

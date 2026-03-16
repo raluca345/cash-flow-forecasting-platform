@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -27,6 +28,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginatedResponse<UserResponse>> listUsers(
             @PageableDefault(size = 10, page = 0, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<User> userPage = userService.listAll(pageable);
@@ -38,18 +40,21 @@ public class UserController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         User created = userService.create(request);
         return ResponseEntity.ok(UserResponse.fromEntity(created));
     }
 
     @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> getUser(@PathVariable UUID userId) {
         User user = userService.getById(userId);
         return ResponseEntity.ok(UserResponse.fromEntity(user));
     }
 
     @PatchMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateUserRequest request
@@ -59,6 +64,7 @@ public class UserController {
     }
 
     @PostMapping(value = "/{userId}/profile-picture", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> setProfilePictureUrl(
             @PathVariable UUID userId,
             @RequestBody String profilePictureUrl
@@ -68,6 +74,7 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}/role")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateUserRole(
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateUserRoleRequest request

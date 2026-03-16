@@ -17,7 +17,8 @@ import java.util.UUID;
 @Table(
         name = "invoices",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"company_id", "invoiceNumber"})
+                @UniqueConstraint(columnNames = {"company_id", "invoiceNumber"}),
+                @UniqueConstraint(name = "uk_invoice_recurring_issue_date", columnNames = {"recurring_invoice_id", "issue_date"})
         }
 )
 @Getter
@@ -39,6 +40,10 @@ public class Invoice extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_invoice_id")
+    private RecurringInvoice recurringInvoice;
 
     @OneToMany(
             mappedBy = "invoice",
@@ -132,7 +137,7 @@ public class Invoice extends BaseEntity{
     }
 
     public void markOverdue(LocalDate today) {
-        if (status == InvoiceStatus.SENT && dueDate.isBefore(today)) {
+        if (isOverdue(today)) {
             status = InvoiceStatus.OVERDUE;
         }
     }

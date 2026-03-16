@@ -32,6 +32,10 @@ public class InvoiceSpecifications {
                 cb.lower(root.get("client").get("name")), "%" + clientName.toLowerCase() + "%");
   }
 
+  public static Specification<Invoice> hasCompanyId(UUID companyId) {
+    return (root, query, cb) -> companyId == null ? cb.conjunction() : cb.equal(root.get("company").get("id"), companyId);
+  }
+
   public static Specification<Invoice> invoiceNumberContains(String invoiceNumber) {
     return (root, query, cb) ->
         invoiceNumber == null

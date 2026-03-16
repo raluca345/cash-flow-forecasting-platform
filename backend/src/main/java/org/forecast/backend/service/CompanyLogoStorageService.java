@@ -19,11 +19,7 @@ public class CompanyLogoStorageService {
             "image/png",
             "image/jpeg",
             "image/webp",
-            "image/gif",
-            // SVG is commonly sent as image/svg+xml
-            "image/svg+xml",
-            // keep for backwards/quirky clients
-            "image/svg"
+            "image/gif"
     );
 
     /**
@@ -75,7 +71,6 @@ public class CompanyLogoStorageService {
             case "image/jpeg" -> "jpg";
             case "image/webp" -> "webp";
             case "image/gif" -> "gif";
-            case "image/svg+xml", "image/svg" -> "svg";
             default -> "bin";
         };
     }

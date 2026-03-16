@@ -1,8 +1,7 @@
 package org.forecast.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.forecast.backend.config.GlobalExceptionHandler;
-import org.forecast.backend.config.TestConfig;
+import org.forecast.backend.testing.WebMvcTestWithTestSecurity;
 import org.forecast.backend.dtos.client.CreateClientRequest;
 import org.forecast.backend.dtos.client.UpdateClientRequest;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
@@ -11,10 +10,10 @@ import org.forecast.backend.service.ClientService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = ClientController.class)
-@Import({GlobalExceptionHandler.class, TestConfig.class})
+@WebMvcTestWithTestSecurity
 class ClientControllerTest {
 
     @Autowired
@@ -57,7 +56,7 @@ class ClientControllerTest {
     void listClients_returnsList() throws Exception {
         Client c = client(UUID.randomUUID());
         Page<Client> page = new PageImpl<>(List.of(c), PageRequest.of(0, 10), 1);
-        when(clientService.listAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        when(clientService.listAll(any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/clients"))
                 .andExpect(status().isOk())
@@ -67,7 +66,7 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.pageSize").value(10))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(clientService).listAll(any(org.springframework.data.domain.Pageable.class));
+        verify(clientService).listAll(any(Pageable.class));
     }
 
     @Test

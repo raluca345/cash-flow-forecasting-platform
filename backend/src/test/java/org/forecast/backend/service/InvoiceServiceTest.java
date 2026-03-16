@@ -7,6 +7,7 @@ import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
 import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Client;
+import org.forecast.backend.model.Company;
 import org.forecast.backend.model.Invoice;
 import org.forecast.backend.repository.InvoiceRepository;
 import org.forecast.backend.repository.CompanyRepository;
@@ -44,6 +45,9 @@ class InvoiceServiceTest {
     private InvoiceRepository invoiceRepository;
 
     @Mock
+    private CompanySecurityService companySecurityService;
+
+    @Mock
     private InvoiceNumberGenerator invoiceNumberGenerator;
 
     @Mock
@@ -69,11 +73,22 @@ class InvoiceServiceTest {
         ReflectionTestUtils.setField(invoiceService, "baseCurrency", "USD");
     }
 
-    private static Client client(UUID id) {
+    private UUID testCompanyId;
+
+    @BeforeEach
+    void setCompanyContext() {
+        testCompanyId = UUID.randomUUID();
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(testCompanyId);
+    }
+
+    private static Client client(UUID id, UUID companyId) {
         Client c = new Client();
         c.setId(id);
         c.setName("Acme");
         c.setEmail("billing@acme.test");
+        Company company = new Company();
+        company.setId(companyId);
+        c.setCompany(company);
         return c;
     }
 
@@ -81,7 +96,7 @@ class InvoiceServiceTest {
         Invoice inv = new Invoice();
         inv.setId(UUID.randomUUID());
         inv.setInvoiceNumber(invoiceNumber);
-        inv.setClient(client(UUID.randomUUID()));
+        inv.setClient(client(UUID.randomUUID(), UUID.randomUUID()));
         inv.setNetTotal(new BigDecimal("100.00"));
         inv.setVatTotal(BigDecimal.ZERO);
         inv.setGrossTotal(new BigDecimal("100.00"));
@@ -121,12 +136,13 @@ class InvoiceServiceTest {
                 .build();
         request.setCompanyId(companyId);
 
-        org.forecast.backend.model.Company company = new org.forecast.backend.model.Company();
+        Company company = new Company();
         company.setId(companyId);
-        when(companyRepository.findById(companyId)).thenReturn(java.util.Optional.of(company));
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(companyId);
 
         when(invoiceNumberGenerator.generateInvoiceNumber()).thenReturn("INV-2026-00001");
-        when(clientService.get(clientId)).thenReturn(client(clientId));
+        when(clientService.get(clientId)).thenReturn(client(clientId, companyId));
         when(exchangeRateService.getRate("USD", "EUR")).thenReturn(new BigDecimal("1.200000"));
 
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -173,12 +189,13 @@ class InvoiceServiceTest {
                 .build();
         UUID companyId = UUID.randomUUID();
         request.setCompanyId(companyId);
-        org.forecast.backend.model.Company company = new org.forecast.backend.model.Company();
+        Company company = new Company();
         company.setId(companyId);
-        when(companyRepository.findById(companyId)).thenReturn(java.util.Optional.of(company));
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(companyId);
 
         when(invoiceNumberGenerator.generateInvoiceNumber()).thenReturn("INV-X");
-        when(clientService.get(clientId)).thenReturn(client(clientId));
+        when(clientService.get(clientId)).thenReturn(client(clientId, companyId));
         when(exchangeRateService.getRate("USD", "EUR")).thenReturn(null);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> invoiceService.createInvoice(request));
@@ -205,12 +222,13 @@ class InvoiceServiceTest {
                 .build();
         UUID companyId = UUID.randomUUID();
         request.setCompanyId(companyId);
-        org.forecast.backend.model.Company company = new org.forecast.backend.model.Company();
+        Company company = new Company();
         company.setId(companyId);
-        when(companyRepository.findById(companyId)).thenReturn(java.util.Optional.of(company));
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(companyId);
 
         when(invoiceNumberGenerator.generateInvoiceNumber()).thenReturn("INV-X");
-        when(clientService.get(clientId)).thenReturn(client(clientId));
+        when(clientService.get(clientId)).thenReturn(client(clientId, companyId));
         when(exchangeRateService.getRate("USD", "EUR")).thenReturn(BigDecimal.ZERO);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> invoiceService.createInvoice(request));
@@ -221,7 +239,9 @@ class InvoiceServiceTest {
     @Test
     void getInvoice_whenPresent_returnsInvoice() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
 
         Invoice found = invoiceService.getInvoice("INV-1");
 
@@ -230,7 +250,7 @@ class InvoiceServiceTest {
 
     @Test
     void getInvoice_whenMissing_throwsResourceNotFound() {
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-404")).thenReturn(Optional.empty());
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-404", testCompanyId)).thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> invoiceService.getInvoice("INV-404"));
         assertTrue(ex.getMessage().contains("No invoice with the number INV-404"));
@@ -240,42 +260,19 @@ class InvoiceServiceTest {
     void getAllInvoices_delegatesToRepository() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Invoice> page = new PageImpl<>(List.of(draftInvoice("INV-1")), pageable, 1);
-        when(invoiceRepository.findByDeletedFalseOrderByIssueDateDesc(pageable)).thenReturn(page);
+        when(invoiceRepository.findByCompanyIdAndDeletedFalseOrderByIssueDateDesc(testCompanyId, pageable)).thenReturn(page);
 
         Page<Invoice> result = invoiceService.getAllInvoices(pageable);
         assertSame(page, result);
     }
 
-    @Test
-    void getOpenInvoicesByStatus_noArg_usesPageRequest0Size10() {
-        Page<Invoice> page = new PageImpl<>(List.of(draftInvoice("INV-1")), PageRequest.of(0, 10), 1);
-        when(invoiceRepository.findByDeletedFalse(any(Pageable.class))).thenReturn(page);
-
-        List<Invoice> result = invoiceService.getOpenInvoicesByStatus();
-
-        assertEquals(1, result.size());
-        verify(invoiceRepository).findByDeletedFalse(pageableCaptor.capture());
-        assertEquals(0, pageableCaptor.getValue().getPageNumber());
-        assertEquals(10, pageableCaptor.getValue().getPageSize());
-    }
-
-    @Test
-    void getOpenInvoicesByStatus_withStatus_usesPageRequest0Size10AndDelegates() {
-        when(invoiceRepository.findByStatusAndDeletedFalse(eq(InvoiceStatus.SENT), any(Pageable.class)))
-                .thenReturn(List.of(draftInvoice("INV-1")));
-
-        List<Invoice> result = invoiceService.getOpenInvoicesByStatus(InvoiceStatus.SENT);
-
-        assertEquals(1, result.size());
-        verify(invoiceRepository).findByStatusAndDeletedFalse(eq(InvoiceStatus.SENT), pageableCaptor.capture());
-        assertEquals(0, pageableCaptor.getValue().getPageNumber());
-        assertEquals(10, pageableCaptor.getValue().getPageSize());
-    }
 
     @Test
     void sendInvoice_marksAsSent_andSaves() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Invoice result = invoiceService.sendInvoice("INV-1");
@@ -289,7 +286,9 @@ class InvoiceServiceTest {
     void payInvoice_marksAsPaid_andSaves() {
         Invoice invoice = draftInvoice("INV-1");
         invoice.setStatus(InvoiceStatus.SENT);
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Invoice result = invoiceService.payInvoice("INV-1");
@@ -302,7 +301,9 @@ class InvoiceServiceTest {
     @Test
     void deleteInvoice_whenDraft_marksDeletedAndSaves() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
 
         invoiceService.deleteInvoice("INV-1");
 
@@ -314,7 +315,9 @@ class InvoiceServiceTest {
     void deleteInvoice_whenNotDraft_throwsUnsupportedOperationException() {
         Invoice invoice = draftInvoice("INV-1");
         invoice.setStatus(InvoiceStatus.SENT);
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
 
         UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class, () -> invoiceService.deleteInvoice("INV-1"));
         assertEquals("Only drafts can be deleted.", ex.getMessage());
@@ -325,7 +328,9 @@ class InvoiceServiceTest {
     void cancelInvoice_whenAlreadyCancelled_throwsUnsupportedOperationException() {
         Invoice invoice = draftInvoice("INV-1");
         invoice.setStatus(InvoiceStatus.CANCELLED);
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
 
         UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class, () -> invoiceService.cancelInvoice("INV-1"));
         assertEquals("Invoice is already cancelled.", ex.getMessage());
@@ -336,7 +341,9 @@ class InvoiceServiceTest {
     void cancelInvoice_happyPath_setsCancelledAndSaves() {
         Invoice invoice = draftInvoice("INV-1");
         invoice.setStatus(InvoiceStatus.SENT);
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Invoice result = invoiceService.cancelInvoice("INV-1");
@@ -349,7 +356,9 @@ class InvoiceServiceTest {
     void editInvoice_whenNotDraft_throwsUnsupportedOperationException() {
         Invoice invoice = draftInvoice("INV-1");
         invoice.setStatus(InvoiceStatus.SENT);
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
                 .build();
@@ -362,7 +371,9 @@ class InvoiceServiceTest {
     @Test
     void editInvoice_updatesAmountRecomputesBaseAmount_andSaves() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
@@ -389,7 +400,9 @@ class InvoiceServiceTest {
     @Test
     void editInvoice_updatesIssueAndDueDates_andSaves() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
@@ -416,8 +429,9 @@ class InvoiceServiceTest {
 
         Page<Invoice> page0 = new PageImpl<>(List.of(inv1, inv2), PageRequest.of(0, 100), 2);
 
-        when(invoiceRepository.findByStatusInAndDueDateBeforeAndDeletedFalse(anyList(), any(LocalDate.class), any(Pageable.class)))
-                .thenReturn(page0);
+        when(invoiceRepository.findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(eq(testCompanyId), anyList(), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(page0)
+                .thenReturn(Page.empty());
 
         invoiceService.markOverdueInvoices();
 
@@ -432,21 +446,100 @@ class InvoiceServiceTest {
         assertEquals(2, saved.size());
         assertTrue(saved.containsAll(List.of(inv1, inv2)));
 
-        verify(invoiceRepository, times(1)).findByStatusInAndDueDateBeforeAndDeletedFalse(anyList(), any(LocalDate.class), any(Pageable.class));
+        verify(invoiceRepository, times(2)).findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(eq(testCompanyId), anyList(), any(LocalDate.class), any(Pageable.class));
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void filterByCriteria_delegatesToRepositoryFindAll_withSpecificationAndPageable() {
         InvoiceSearchCriteria criteria = new InvoiceSearchCriteria();
         Pageable pageable = PageRequest.of(2, 25);
         Page<Invoice> expected = new PageImpl<>(List.of(draftInvoice("INV-1")), pageable, 1);
 
-        when(invoiceRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Invoice>>any(), eq(pageable))).thenReturn(expected);
+        when(invoiceRepository.findAll((Specification<Invoice>) any(), eq(pageable))).thenReturn(expected);
 
         Page<Invoice> result = invoiceService.filterByCriteria(criteria, pageable);
 
         assertSame(expected, result);
-        verify(invoiceRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Invoice>>any(), eq(pageable));
+        verify(invoiceRepository).findAll((Specification<Invoice>) any(), eq(pageable));
+    }
+
+    @Test
+    void createInvoice_whenRequestTargetsDifferentCompany_throwsAccessDenied() {
+        UUID clientId = UUID.randomUUID();
+        UUID requestedCompanyId = UUID.randomUUID();
+        UUID authenticatedCompanyId = UUID.randomUUID();
+
+        CreateInvoiceRequest request = CreateInvoiceRequest.builder()
+                .clientId(clientId)
+                .items(List.of(
+                        CreateInvoiceItemRequest.builder()
+                                .description("Service")
+                                .quantity(new BigDecimal("1.000"))
+                                .unitPrice(new BigDecimal("10.00"))
+                                .vatRatePercent(BigDecimal.ZERO)
+                                .build()
+                ))
+                .companyId(requestedCompanyId)
+                .currency("EUR")
+                .issueDate(LocalDate.now())
+                .dueDate(LocalDate.now())
+                .build();
+
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(authenticatedCompanyId);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> invoiceService.createInvoice(request));
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    void filterByCriteria_whenRequestTargetsDifferentCompany_throwsAccessDenied() {
+        InvoiceSearchCriteria criteria = new InvoiceSearchCriteria();
+        criteria.setCompanyId(UUID.randomUUID());
+
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(UUID.randomUUID());
+
+        assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> invoiceService.filterByCriteria(criteria, PageRequest.of(0, 10))
+        );
+
+        verify(invoiceRepository, never()).findAll((Specification<Invoice>) any(), any(Pageable.class));
+    }
+
+    @Test
+    void markOverdueInvoices_withoutAuthenticatedCompany_processesAllCompanies() {
+        UUID companyAId = UUID.randomUUID();
+        UUID companyBId = UUID.randomUUID();
+
+        Company companyA = new Company();
+        companyA.setId(companyAId);
+
+        Company companyB = new Company();
+        companyB.setId(companyBId);
+
+        Invoice inv1 = draftInvoice("INV-A");
+        inv1.setStatus(InvoiceStatus.SENT);
+        inv1.setDueDate(LocalDate.now().minusDays(1));
+
+        Invoice inv2 = draftInvoice("INV-B");
+        inv2.setStatus(InvoiceStatus.SENT);
+        inv2.setDueDate(LocalDate.now().minusDays(2));
+
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(null);
+        when(companyRepository.findAll()).thenReturn(List.of(companyA, companyB));
+        when(invoiceRepository.findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(eq(companyAId), anyList(), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(inv1), PageRequest.of(0, 100), 1))
+                .thenReturn(Page.empty());
+        when(invoiceRepository.findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(eq(companyBId), anyList(), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(inv2), PageRequest.of(0, 100), 1))
+                .thenReturn(Page.empty());
+
+        invoiceService.markOverdueInvoices();
+
+        assertEquals(InvoiceStatus.OVERDUE, inv1.getStatus());
+        assertEquals(InvoiceStatus.OVERDUE, inv2.getStatus());
+        verify(invoiceRepository, times(2)).saveAll(anyList());
     }
 
     @Test
@@ -456,7 +549,9 @@ class InvoiceServiceTest {
         invoice.setVatTotal(new BigDecimal("5.00"));
         invoice.setGrossTotal(new BigDecimal("105.00"));
 
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
@@ -478,7 +573,9 @@ class InvoiceServiceTest {
     @Test
     void editInvoice_whenVatRateZero_recalculatesVatAsZero() {
         Invoice invoice = draftInvoice("INV-1");
-        when(invoiceRepository.findByInvoiceNumberAndDeletedFalse("INV-1")).thenReturn(Optional.of(invoice));
+        invoice.setCompany(new Company());
+        invoice.getCompany().setId(testCompanyId);
+        when(invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse("INV-1", testCompanyId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateInvoiceDraftPartialRequest request = UpdateInvoiceDraftPartialRequest.builder()
