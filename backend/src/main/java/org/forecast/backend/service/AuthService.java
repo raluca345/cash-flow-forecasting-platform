@@ -35,7 +35,9 @@ public class AuthService {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
-        claims.put("companyId", user.getCompany().getId());
+        if (user.getCompany() != null) {
+            claims.put("companyId", user.getCompany().getId().toString());
+        }
 
         String token = jwtService.generateToken(claims, user);
 
@@ -57,7 +59,9 @@ public class AuthService {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
-        claims.put("companyId", user.getCompany().getId());
+        if (user.getCompany() != null) {
+            claims.put("companyId", user.getCompany().getId().toString());
+        }
 
         String token = jwtService.generateToken(claims, user);
         return AuthResponse.builder().token(token).role(user.getRole().name()).build();

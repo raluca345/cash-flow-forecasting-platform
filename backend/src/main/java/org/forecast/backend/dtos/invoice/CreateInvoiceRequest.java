@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.forecast.backend.dtos.client.CreateClientRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,8 +25,10 @@ import java.util.UUID;
 @Builder
 public class CreateInvoiceRequest {
 
-    @NotNull(message = "Client ID is required")
     private UUID clientId;
+
+    @Valid
+    private CreateClientRequest newClient;
 
     private UUID companyId;
 

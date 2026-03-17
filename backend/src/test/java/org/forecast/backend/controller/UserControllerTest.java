@@ -63,14 +63,14 @@ class UserControllerTest {
         u.setId(id);
         u.setName("Jane Doe");
         u.setEmail("jane@acme.test");
-        u.setRole(Role.VIEWER);
+        u.setRole(Role.FINANCE);
         u.setCompany(c);
         u.setProfilePictureUrl(null);
         return u;
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void listUsers_returnsList() throws Exception {
         User u = user(UUID.randomUUID(), UUID.randomUUID());
         Page<User> page = new PageImpl<>(List.of(u), PageRequest.of(0, 10), 1);
@@ -88,7 +88,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void createUser_returns200() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
@@ -97,13 +97,13 @@ class UserControllerTest {
                 .name("Jane Doe")
                 .email("jane@acme.test")
                 .password("secret123")
-                // role is ignored on create (self-signup) and defaults to VIEWER
-                .role(Role.ADMIN)
+                .role(Role.COMPANY_ADMIN)
                 .companyId(companyId)
                 .profilePictureUrl("/uploads/tmp/abc.png")
                 .build();
 
         User created = user(userId, companyId);
+        created.setRole(Role.COMPANY_ADMIN);
         created.setProfilePictureUrl(req.getProfilePictureUrl());
 
         when(userService.create(any(CreateUserRequest.class))).thenReturn(created);
@@ -115,14 +115,14 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
                 .andExpect(jsonPath("$.companyId").value(companyId.toString()))
-                .andExpect(jsonPath("$.role").value("VIEWER"))
+                .andExpect(jsonPath("$.role").value("COMPANY_ADMIN"))
                 .andExpect(jsonPath("$.profilePictureUrl").value(req.getProfilePictureUrl()));
 
         verify(userService).create(any(CreateUserRequest.class));
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void getUser_notFound_returns404() throws Exception {
         UUID userId = UUID.randomUUID();
         when(userService.getById(userId)).thenThrow(new ResourceNotFoundException("No user"));
@@ -135,7 +135,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void updateUser_validationError_returns400() throws Exception {
         UUID userId = UUID.randomUUID();
         UpdateUserRequest req = UpdateUserRequest.builder()
@@ -153,7 +153,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void updateUser_happyPath_returnsUpdated() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
@@ -178,7 +178,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void setProfilePictureUrl_happyPath_returnsUpdated() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
@@ -202,7 +202,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void updateUserRole_happyPath_returnsUpdated() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
@@ -228,7 +228,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void updateUserRole_missingRole_returns400() throws Exception {
         UUID userId = UUID.randomUUID();
 
@@ -245,15 +245,15 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void updateUserRole_forbiddenTransition_returns400() throws Exception {
         UUID userId = UUID.randomUUID();
 
         UpdateUserRoleRequest req = UpdateUserRoleRequest.builder()
-                .role(Role.ADMIN)
+                .role(Role.COMPANY_ADMIN)
                 .build();
 
-        when(userService.updateRole(eq(userId), eq(Role.ADMIN)))
+        when(userService.updateRole(eq(userId), eq(Role.COMPANY_ADMIN)))
                 .thenThrow(new IllegalArgumentException("Invalid role transition"));
 
         mockMvc.perform(patch("/api/v1/users/{id}/role", userId)
@@ -264,11 +264,11 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("INVALID_ARGUMENT"))
                 .andExpect(jsonPath("$.message").value("Invalid role transition"));
 
-        verify(userService).updateRole(eq(userId), eq(Role.ADMIN));
+        verify(userService).updateRole(eq(userId), eq(Role.COMPANY_ADMIN));
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "SYSTEM_ADMIN")
     void createUser_withExpiredInvite_returns410() throws Exception {
         CreateUserRequest req = CreateUserRequest.builder()
                 .name("John Doe")

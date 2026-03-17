@@ -30,10 +30,10 @@ public class CreateUserRequest {
     @Size(min = 8, max = 72, message = "Password must be between 8 and 72 characters")
     private String password;
 
-    // Role is optional for self-signup flows (e.g. Google OAuth). Defaults to VIEWER in the service.
+    // Role is optional for self-signup flows. Service defaults self-signup to FINANCE.
     private Role role;
 
-    // Either companyId or companyInviteCode may be provided. For self-signup flows we require an invite code.
+    // Either companyId or companyInviteCode may be provided. Self-signup requires an invite code.
     private UUID companyId;
 
     @Size(max = 64, message = "Company invite code must be at most 64 characters")

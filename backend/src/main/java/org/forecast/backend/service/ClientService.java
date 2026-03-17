@@ -32,42 +32,29 @@ public class ClientService implements  IClientService {
         client.setVatNumber(request.getVatNumber());
         client.setAddress(request.getAddress());
 
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null) {
-            Company company = companyRepository.findById(currentCompanyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("No company with id " + currentCompanyId + " found."));
-            client.setCompany(company);
-        }
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
+        Company company = companyRepository.findById(currentCompanyId)
+                .orElseThrow(() -> new ResourceNotFoundException("No company with id " + currentCompanyId + " found."));
+        client.setCompany(company);
 
         return clientRepository.save(client);
     }
 
     @Override
     public Client get(UUID clientId) {
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null) {
-            return clientRepository.findByIdAndCompanyId(clientId, currentCompanyId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
-        }
-
-        return clientRepository.findById(clientId)
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
+        return clientRepository.findByIdAndCompanyId(clientId, currentCompanyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
     }
 
     public List<Client> listAll() {
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null) {
-            return clientRepository.findByCompanyId(currentCompanyId);
-        }
-        return clientRepository.findAll();
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
+        return clientRepository.findByCompanyId(currentCompanyId);
     }
 
     public Page<Client> listAll(Pageable pageable) {
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null) {
-            return clientRepository.findByCompanyId(currentCompanyId, pageable);
-        }
-        return clientRepository.findAll(pageable);
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
+        return clientRepository.findByCompanyId(currentCompanyId, pageable);
     }
 
     public Client update(UUID clientId, UpdateClientRequest request) {

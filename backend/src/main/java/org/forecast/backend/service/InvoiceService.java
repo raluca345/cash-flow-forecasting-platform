@@ -2,6 +2,7 @@ package org.forecast.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.forecast.backend.dtos.client.CreateClientRequest;
 import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
 import org.forecast.backend.dtos.invoice.InvoiceSearchCriteria;
 import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
@@ -111,10 +112,7 @@ public class InvoiceService implements IInvoiceService{
                 .orElseThrow(() -> new ResourceNotFoundException("No company with id " + currentCompanyId + " found."));
         invoice.setCompany(company);
 
-        Client client = clientService.get(request.getClientId());
-        if (client.getCompany() == null || !currentCompanyId.equals(client.getCompany().getId())) {
-            throw new AccessDeniedException("Client does not belong to the authenticated company");
-        }
+        Client client = resolveClient(request, currentCompanyId);
         invoice.setClient(client);
         invoice.setCurrency(request.getCurrency().toUpperCase());
 
@@ -257,13 +255,13 @@ public class InvoiceService implements IInvoiceService{
 
     @Override
     public Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable) {
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null && criteria.getCompanyId() != null && !currentCompanyId.equals(criteria.getCompanyId())) {
+        UUID currentCompanyId = requireAuthenticatedCompanyId("Invoices can only be queried in the authenticated company");
+        if (criteria.getCompanyId() != null && !currentCompanyId.equals(criteria.getCompanyId())) {
             throw new AccessDeniedException("Invoices can only be queried in the authenticated company");
         }
 
         Specification<Invoice> spec = Specification
-                .where(currentCompanyId != null ? hasCompanyId(currentCompanyId) : hasCompanyId(criteria.getCompanyId()))
+                .where(hasCompanyId(currentCompanyId))
                 .and(notDeleted())
                 .and(hasStatus(criteria.getStatus()))
                 .and(hasClientId(criteria.getClientId()))
@@ -284,5 +282,35 @@ public class InvoiceService implements IInvoiceService{
                 .and(paidAtTo(criteria.getPaidAtTo()));
 
         return invoiceRepository.findAll(spec, pageable);
+    }
+
+    private Client resolveClient(CreateInvoiceRequest request, UUID currentCompanyId) {
+        if (request.getClientId() != null && request.getNewClient() != null) {
+            throw new IllegalArgumentException("Provide either clientId or newClient, not both.");
+        }
+
+        Client client;
+        if (request.getClientId() != null) {
+            client = clientService.get(request.getClientId());
+        } else if (request.getNewClient() != null) {
+            client = clientService.create(copyClientRequest(request.getNewClient()));
+        } else {
+            throw new IllegalArgumentException("Either clientId or newClient is required.");
+        }
+
+        if (client.getCompany() == null || !currentCompanyId.equals(client.getCompany().getId())) {
+            throw new AccessDeniedException("Client does not belong to the authenticated company");
+        }
+        return client;
+    }
+
+    private CreateClientRequest copyClientRequest(CreateClientRequest request) {
+        return CreateClientRequest.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
+                .vatNumber(request.getVatNumber())
+                .address(request.getAddress())
+                .build();
     }
 }

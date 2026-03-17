@@ -54,8 +54,8 @@ class UserControllerRoleAccessTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void adminRole_canListUsers_ok() throws Exception {
+    @WithMockUser(roles = "COMPANY_ADMIN")
+    void companyAdminRole_canListUsers_ok() throws Exception {
         // return an empty page to satisfy controller
         when(userService.listAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(new User()), PageRequest.of(0, 10), 1));

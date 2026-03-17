@@ -33,6 +33,8 @@ public class CompanyLogoStorageService {
 
     /**
      * Stores the uploaded logo to disk and returns the public URL path (under /uploads/**).
+     * TODO: Replace filesystem-backed logo storage with a real media storage system
+     * (for example S3-compatible object storage) and return managed asset URLs.
      */
     public String storeCompanyLogo(UUID companyId, MultipartFile file) {
         if (file == null || file.isEmpty()) {

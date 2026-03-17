@@ -26,6 +26,8 @@ public class StaticResourceConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // TODO: Replace local /uploads/** static serving with a real asset delivery setup
+        // (object storage + signed/public URLs or a dedicated media host/CDN).
         Path uploadsPath = Path.of(uploadsDir).toAbsolutePath().normalize();
         String location = uploadsPath.toUri().toString();
 

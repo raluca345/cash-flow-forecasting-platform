@@ -146,7 +146,6 @@ class InvoiceControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("Validation failed"))
-                .andExpect(jsonPath("$.fieldErrors.clientId").value("Client ID is required"))
                 .andExpect(jsonPath("$.fieldErrors.items").value("At least one item is required"))
                 .andExpect(jsonPath("$.fieldErrors.currency", anyOf(
                         is("Currency must be uppercase 3 letters (e.g. USD)"),

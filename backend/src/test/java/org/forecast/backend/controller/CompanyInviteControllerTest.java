@@ -37,8 +37,8 @@ class CompanyInviteControllerTest {
     private CompanyLogoStorageService companyLogoStorageService;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void generateInviteCode_returnsCode_forAdmin() throws Exception {
+    @WithMockUser(roles = "COMPANY_ADMIN")
+    void generateInviteCode_returnsCode_forCompanyAdmin() throws Exception {
         UUID id = UUID.randomUUID();
         when(companyService.generateInviteCode(id)).thenReturn("INV12345");
         Company c = new Company();

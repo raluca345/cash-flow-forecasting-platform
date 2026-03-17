@@ -1,5 +1,6 @@
 package org.forecast.backend.service;
 
+import org.forecast.backend.dtos.client.CreateClientRequest;
 import org.forecast.backend.dtos.invoice.CreateInvoiceItemRequest;
 import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
 import org.forecast.backend.dtos.invoice.InvoiceSearchCriteria;
@@ -233,6 +234,89 @@ class InvoiceServiceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> invoiceService.createInvoice(request));
         assertEquals("Derived exchange rate must be > 0", ex.getMessage());
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    void createInvoice_withNewClient_autoCreatesClientBeforeSavingInvoice() {
+        UUID companyId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        CreateInvoiceRequest request = CreateInvoiceRequest.builder()
+                .newClient(CreateClientRequest.builder()
+                        .name("New Client")
+                        .email("billing@new-client.test")
+                        .phoneNumber("+40 700 000 000")
+                        .vatNumber("RO12345678")
+                        .address("Bucharest")
+                        .build())
+                .items(List.of(
+                        CreateInvoiceItemRequest.builder()
+                                .description("Service")
+                                .quantity(new BigDecimal("1.000"))
+                                .unitPrice(new BigDecimal("10.00"))
+                                .vatRatePercent(BigDecimal.ZERO)
+                                .build()
+                ))
+                .currency("EUR")
+                .issueDate(LocalDate.now())
+                .dueDate(LocalDate.now())
+                .companyId(companyId)
+                .build();
+
+        Company company = new Company();
+        company.setId(companyId);
+        Client createdClient = client(clientId, companyId);
+
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(companyId);
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+        when(invoiceNumberGenerator.generateInvoiceNumber()).thenReturn("INV-NEW-CLIENT");
+        when(clientService.create(any(CreateClientRequest.class))).thenReturn(createdClient);
+        when(exchangeRateService.getRate("USD", "EUR")).thenReturn(new BigDecimal("1.100000"));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Invoice saved = invoiceService.createInvoice(request);
+
+        assertEquals(clientId, saved.getClient().getId());
+        verify(clientService).create(any(CreateClientRequest.class));
+        verify(clientService, never()).get(any());
+        verify(invoiceRepository).save(any(Invoice.class));
+    }
+
+    @Test
+    void createInvoice_whenBothClientIdAndNewClientProvided_throwsIllegalArgumentException() {
+        UUID companyId = UUID.randomUUID();
+        Company company = new Company();
+        company.setId(companyId);
+        CreateInvoiceRequest request = CreateInvoiceRequest.builder()
+                .clientId(UUID.randomUUID())
+                .newClient(CreateClientRequest.builder()
+                        .name("New Client")
+                        .email("billing@new-client.test")
+                        .phoneNumber("+40 700 000 000")
+                        .address("Bucharest")
+                        .build())
+                .items(List.of(
+                        CreateInvoiceItemRequest.builder()
+                                .description("Service")
+                                .quantity(new BigDecimal("1.000"))
+                                .unitPrice(new BigDecimal("10.00"))
+                                .vatRatePercent(BigDecimal.ZERO)
+                                .build()
+                ))
+                .currency("EUR")
+                .issueDate(LocalDate.now())
+                .dueDate(LocalDate.now())
+                .companyId(companyId)
+                .build();
+
+        when(companySecurityService.getCurrentCompanyId()).thenReturn(companyId);
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> invoiceService.createInvoice(request));
+
+        assertEquals("Provide either clientId or newClient, not both.", ex.getMessage());
+        verify(clientService, never()).create(any());
+        verify(clientService, never()).get(any());
         verify(invoiceRepository, never()).save(any());
     }
 

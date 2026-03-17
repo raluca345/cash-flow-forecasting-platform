@@ -35,8 +35,7 @@ public class SecurityConfig {
   public RoleHierarchy roleHierarchy() {
     return RoleHierarchyImpl.fromHierarchy(
         """
-      ROLE_ADMIN > ROLE_FINANCE
-      ROLE_FINANCE > ROLE_VIEWER
+      ROLE_COMPANY_ADMIN > ROLE_FINANCE
       """);
   }
 
@@ -52,15 +51,10 @@ public class SecurityConfig {
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
-            authorize ->
+                authorize ->
                 authorize
                     .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login")
                     .permitAll()
-                    .requestMatchers("/api/v1/invoices/**", "/api/v1/recurring-invoices/**")
-                    .hasRole("FINANCE")
-                    .requestMatchers(
-                        "/api/v1/clients/**", "/api/v1/companies/**", "/api/v1/users/**")
-                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

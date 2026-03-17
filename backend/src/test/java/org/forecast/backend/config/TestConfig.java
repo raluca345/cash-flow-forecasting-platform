@@ -58,9 +58,9 @@ public class TestConfig {
                 "test-user",
                 null,
                 List.of(
-                    new SimpleGrantedAuthority("ROLE_ADMIN"),
-                    new SimpleGrantedAuthority("ROLE_FINANCE"),
-                    new SimpleGrantedAuthority("ROLE_VIEWER")));
+                    new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"),
+                    new SimpleGrantedAuthority("ROLE_COMPANY_ADMIN"),
+                    new SimpleGrantedAuthority("ROLE_FINANCE")));
         SecurityContextHolder.getContext().setAuthentication(auth);
         try {
           filterChain.doFilter(request, response);
@@ -90,7 +90,7 @@ public class TestConfig {
     JwtService mock = Mockito.mock(JwtService.class);
     // default permissive behavior for controller tests
     Mockito.when(mock.extractUsername(Mockito.anyString())).thenReturn("test-user");
-    Mockito.when(mock.extractRole(Mockito.anyString())).thenReturn("ROLE_ADMIN");
+    Mockito.when(mock.extractRole(Mockito.anyString())).thenReturn("SYSTEM_ADMIN");
     Mockito.when(mock.isTokenValid(Mockito.anyString(), Mockito.any())).thenReturn(true);
     return mock;
   }
@@ -100,7 +100,8 @@ public class TestConfig {
   @Bean(name = "testUserDetailsService")
   @ConditionalOnMissingBean(UserDetailsService.class)
   public UserDetailsService testUserDetailsService() {
-    return username -> new User("test-user", "", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    return username ->
+        new User("test-user", "", List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN")));
   }
 
   // Provide the JwtAuthenticationFilter bean wired with the test JwtService and UserDetailsService

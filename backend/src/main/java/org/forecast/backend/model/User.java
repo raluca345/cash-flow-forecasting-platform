@@ -67,15 +67,14 @@ public class User implements UserDetails {
     @NotNull(message = "Role is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private Role role = Role.VIEWER;
+    private Role role = Role.FINANCE;
 
     @Size(max = 2048, message = "Profile picture URL must be at most 2048 characters")
     @Column(length = 2048)
     private String profilePictureUrl;
 
-    @NotNull(message = "Company is required")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "company_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
     @JsonBackReference
     private Company company;
 
@@ -91,7 +90,7 @@ public class User implements UserDetails {
         // Ensure a persisted user always has a role set. Defensive: if role was
         // accidentally cleared, restore the safe default before persisting.
         if (this.role == null) {
-            this.role = Role.VIEWER;
+            this.role = Role.FINANCE;
         }
     }
 

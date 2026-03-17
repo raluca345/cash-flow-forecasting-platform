@@ -1,7 +1,7 @@
 package org.forecast.backend.enums;
 
 public enum Role {
-    ADMIN,
-    FINANCE,
-    VIEWER
+    SYSTEM_ADMIN,
+    COMPANY_ADMIN,
+    FINANCE
 }

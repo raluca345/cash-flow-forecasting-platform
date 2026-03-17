@@ -37,7 +37,15 @@ public class JwtService {
     if (!claims.containsKey("role")) {
       userDetails.getAuthorities().stream()
           .findFirst()
-          .ifPresent(auth -> claims.put("role", auth.getAuthority()));
+          .ifPresent(
+              auth -> {
+                String authority = auth.getAuthority();
+                if (authority != null && authority.startsWith("ROLE_")) {
+                  claims.put("role", authority.substring("ROLE_".length()));
+                } else {
+                  claims.put("role", authority);
+                }
+              });
     }
 
     return Jwts.builder()

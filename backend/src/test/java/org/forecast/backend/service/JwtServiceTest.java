@@ -26,13 +26,13 @@ class JwtServiceTest {
         UserDetails user = Mockito.mock(UserDetails.class);
         when(user.getUsername()).thenReturn("jane@acme.test");
         Collection<GrantedAuthority> auths =
-                List.of(new SimpleGrantedAuthority("VIEWER"));
+                List.of(new SimpleGrantedAuthority("ROLE_FINANCE"));
         when(user.getAuthorities()).thenAnswer(inv -> auths);
 
         String token = svc.generateToken(Map.of(), user);
         String role = svc.extractRole(token);
 
-        assertThat(role).isEqualTo("VIEWER");
+        assertThat(role).isEqualTo("FINANCE");
     }
 
     @Test
@@ -44,13 +44,13 @@ class JwtServiceTest {
         UserDetails user = Mockito.mock(UserDetails.class);
         when(user.getUsername()).thenReturn("john@acme.test");
         Collection<GrantedAuthority> auths2 =
-                List.of(new SimpleGrantedAuthority("VIEWER"));
+                List.of(new SimpleGrantedAuthority("ROLE_FINANCE"));
         when(user.getAuthorities()).thenAnswer(inv -> auths2);
 
-        String token = svc.generateToken(Map.of("role", "ADMIN"), user);
+        String token = svc.generateToken(Map.of("role", "COMPANY_ADMIN"), user);
         String role = svc.extractRole(token);
 
-        assertThat(role).isEqualTo("ADMIN");
+        assertThat(role).isEqualTo("COMPANY_ADMIN");
     }
 }
 

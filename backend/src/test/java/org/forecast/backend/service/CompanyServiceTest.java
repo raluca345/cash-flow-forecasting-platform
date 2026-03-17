@@ -1,6 +1,7 @@
 package org.forecast.backend.service;
 
 import org.forecast.backend.model.Company;
+import org.forecast.backend.dtos.company.UpdateCompanyRequest;
 import org.forecast.backend.repository.CompanyRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,7 +39,6 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
-        when(companySecurityService.getCurrentCompanyId()).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
         when(companyRepository.save(c)).thenAnswer(inv -> inv.getArgument(0));
 
@@ -51,7 +54,6 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
-        when(companySecurityService.getCurrentCompanyId()).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
 
         // First save throws DataIntegrityViolationException, second returns entity
@@ -71,7 +73,6 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
-        when(companySecurityService.getCurrentCompanyId()).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
 
         // Always throw
@@ -83,15 +84,41 @@ class CompanyServiceTest {
     @Test
     void getById_rejectsCrossCompanyAccess() {
         UUID requestedCompanyId = UUID.randomUUID();
-        UUID currentCompanyId = UUID.randomUUID();
 
         Company c = new Company();
         c.setId(requestedCompanyId);
 
-        when(companySecurityService.getCurrentCompanyId()).thenReturn(currentCompanyId);
         when(companyRepository.findById(requestedCompanyId)).thenReturn(Optional.of(c));
+        when(companySecurityService.isSystemAdmin()).thenReturn(false);
+        doThrow(new AccessDeniedException("Cannot access another company"))
+                .when(companySecurityService)
+                .assertCompanyAccess(eq(requestedCompanyId), any());
 
         assertThrows(AccessDeniedException.class, () -> companyService.getById(requestedCompanyId));
+    }
+
+    @Test
+    void generateInviteCode_rejectsSystemAdmin() {
+        UUID companyId = UUID.randomUUID();
+        doThrow(new AccessDeniedException("Only company admins can manage company profiles or invite codes."))
+                .when(companySecurityService)
+                .requireCompanyAdmin(any());
+
+        assertThrows(AccessDeniedException.class, () -> companyService.generateInviteCode(companyId));
+    }
+
+    @Test
+    void update_rejectsSystemAdmin() {
+        UUID companyId = UUID.randomUUID();
+        UpdateCompanyRequest request = UpdateCompanyRequest.builder()
+                .name("Updated Co")
+                .build();
+
+        doThrow(new AccessDeniedException("Only company admins can manage company profiles or invite codes."))
+                .when(companySecurityService)
+                .requireCompanyAdmin(any());
+
+        assertThrows(AccessDeniedException.class, () -> companyService.update(companyId, request));
     }
 }
 
