@@ -129,7 +129,7 @@ public class RecurringInvoiceService implements IRecurringInvoiceService {
         UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
         Client client = clientService.get(request.getClientId());
         if (client.getCompany() == null || !currentCompanyId.equals(client.getCompany().getId())) {
-            throw new IllegalArgumentException("Client does not belong to the authenticated company");
+            throw new ResourceNotFoundException("Client not found");
         }
 
         validateDateRange(request.getStartDate(), request.getEndDate());
@@ -174,7 +174,7 @@ public class RecurringInvoiceService implements IRecurringInvoiceService {
         if (request.getClientId() != null) {
             Client client = clientService.get(request.getClientId());
             if (client.getCompany() == null || !recurringInvoice.getCompany().getId().equals(client.getCompany().getId())) {
-                throw new IllegalArgumentException("Client does not belong to the authenticated company");
+                throw new ResourceNotFoundException("Client not found");
             }
             recurringInvoice.setClient(client);
         }

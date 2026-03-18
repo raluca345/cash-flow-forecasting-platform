@@ -16,7 +16,7 @@ public class CompanySecurityService {
     /**
      * Return the company id associated with the currently authenticated user, or null if not authenticated.
      */
-    public UUID getCurrentCompanyId() {
+    private UUID getCurrentCompanyId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null || "anonymousUser".equals(auth.getPrincipal())) {
             return null;
@@ -94,5 +94,6 @@ public class CompanySecurityService {
             throw new AccessDeniedException(message);
         }
     }
+
 }
 

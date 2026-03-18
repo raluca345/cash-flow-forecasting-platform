@@ -14,8 +14,6 @@ public class InvoiceSearchCriteria {
 
     private InvoiceStatus status;
 
-    private UUID companyId;
-
     private UUID clientId;
 
     private String clientName;

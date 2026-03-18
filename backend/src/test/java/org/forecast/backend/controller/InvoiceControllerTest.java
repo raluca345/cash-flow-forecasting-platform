@@ -87,7 +87,6 @@ class InvoiceControllerTest {
 
     private static CreateInvoiceRequest validCreateInvoiceRequest() {
         return CreateInvoiceRequest.builder()
-                .companyId(UUID.randomUUID())
                 .clientId(UUID.randomUUID())
                 .items(List.of(
                         CreateInvoiceItemRequest.builder()

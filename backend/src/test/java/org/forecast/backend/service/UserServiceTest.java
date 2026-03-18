@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.forecast.backend.dtos.user.CreateUserRequest;
 import org.forecast.backend.enums.Role;
+import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.model.User;
 import org.forecast.backend.repository.CompanyRepository;
@@ -111,7 +112,7 @@ class UserServiceTest {
     }
 
     @Test
-    void create_whenAuthenticatedCompanyDiffers_rejectsCrossCompanyRequest() {
+    void create_whenAuthenticatedCompanyDiffers_returnsCompanyNotFound() {
         UUID authenticatedCompanyId = UUID.randomUUID();
         UUID requestedCompanyId = UUID.randomUUID();
 
@@ -125,10 +126,12 @@ class UserServiceTest {
         when(companySecurityService.getCurrentRole()).thenReturn(Role.COMPANY_ADMIN);
         when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(authenticatedCompanyId);
 
-        assertThrows(
-                AccessDeniedException.class,
+        ResourceNotFoundException ex = assertThrows(
+                ResourceNotFoundException.class,
                 () -> userService.create(request)
         );
+
+        assertEquals("No company with id " + requestedCompanyId + " found.", ex.getMessage());
 
         verify(companyRepository, never()).findById(requestedCompanyId);
         verify(userRepository, never()).save(any(User.class));

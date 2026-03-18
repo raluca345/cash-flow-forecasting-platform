@@ -30,8 +30,6 @@ public class CreateInvoiceRequest {
     @Valid
     private CreateClientRequest newClient;
 
-    private UUID companyId;
-
     @NotEmpty(message = "At least one item is required")
     @Valid
     private List<CreateInvoiceItemRequest> items;

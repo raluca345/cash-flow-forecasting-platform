@@ -10,6 +10,10 @@ import org.springframework.data.jpa.domain.Specification;
 
 public class InvoiceSpecifications {
 
+  public static Specification<Invoice> visibleToCompany(UUID companyId) {
+    return hasCompanyId(companyId).and(notDeleted());
+  }
+
   public static Specification<Invoice> notDeleted() {
     return (root, query, cb) -> cb.isFalse(root.get("deleted"));
   }

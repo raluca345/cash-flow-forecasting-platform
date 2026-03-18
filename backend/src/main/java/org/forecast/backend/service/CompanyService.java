@@ -12,6 +12,7 @@ import org.forecast.backend.model.Company;
 import org.forecast.backend.repository.CompanyRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -69,7 +70,10 @@ public class CompanyService {
                 () -> new ResourceNotFoundException("No company with id " + id + " found."));
 
     if (!companySecurityService.isSystemAdmin()) {
-      companySecurityService.assertCompanyAccess(company.getId(), "Cannot access another company");
+      UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Access denied.");
+      if (!currentCompanyId.equals(company.getId())) {
+        throw new ResourceNotFoundException("No company with id " + id + " found.");
+      }
     }
 
     return company;
@@ -134,6 +138,9 @@ public class CompanyService {
   private void requireCompanyAdminCompanyAccess(UUID companyId) {
     companySecurityService.requireCompanyAdmin(
         "Only company admins can manage company profiles or invite codes.");
-    companySecurityService.assertCompanyAccess(companyId, "Access denied.");
+    UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Access denied.");
+    if (!currentCompanyId.equals(companyId)) {
+      throw new AccessDeniedException("Access denied.");
+    }
   }
 }

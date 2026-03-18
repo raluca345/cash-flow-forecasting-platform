@@ -2,7 +2,6 @@ package org.forecast.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.forecast.backend.dtos.client.CreateClientRequest;
 import org.forecast.backend.dtos.invoice.CreateInvoiceRequest;
 import org.forecast.backend.dtos.invoice.InvoiceSearchCriteria;
 import org.forecast.backend.dtos.invoice.UpdateInvoiceDraftPartialRequest;
@@ -20,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,27 +47,12 @@ public class InvoiceService implements IInvoiceService{
     @Value("${app.currency.base:USD}")
     private String baseCurrency;
 
-    private UUID requireCompanyId(String notFoundMessage) {
-        UUID currentCompany = companySecurityService.getCurrentCompanyId();
-        if (currentCompany == null) {
-            throw new ResourceNotFoundException(notFoundMessage);
-        }
-        return currentCompany;
-    }
-
-    private UUID requireAuthenticatedCompanyId(String message) {
-        UUID currentCompany = companySecurityService.getCurrentCompanyId();
-        if (currentCompany == null) {
-            throw new AccessDeniedException(message);
-        }
-        return currentCompany;
-    }
-
     private void processOverdueInvoicesForCompany(UUID companyId, LocalDate today, List<InvoiceStatus> eligibleStatuses) {
         int pageSize = 100;
         int processedForCompany = 0;
 
         while (true) {
+            // Always query page 0 because processed invoices no longer match the SENT filter after save.
             Pageable pageable = PageRequest.of(0, pageSize);
             Page<Invoice> page = invoiceRepository.findByCompanyIdAndStatusInAndDueDateBeforeAndDeletedFalse(
                     companyId,
@@ -98,12 +81,9 @@ public class InvoiceService implements IInvoiceService{
     }
 
     @Override
+    @Transactional
     public Invoice createInvoice(CreateInvoiceRequest request) {
-
-        UUID currentCompanyId = requireAuthenticatedCompanyId("Company context required");
-        if (request.getCompanyId() != null && !currentCompanyId.equals(request.getCompanyId())) {
-            throw new AccessDeniedException("Invoices can only be created in the authenticated company");
-        }
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
 
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber(invoiceNumberGenerator.generateInvoiceNumber());
@@ -148,7 +128,7 @@ public class InvoiceService implements IInvoiceService{
 
     @Override
     public Invoice getInvoice(String invoiceNumber) {
-        UUID currentCompany = requireCompanyId("No invoice with the number " + invoiceNumber + " found.");
+        UUID currentCompany = companySecurityService.requireCurrentCompanyId("Company context required");
         return invoiceRepository.findByInvoiceNumberAndCompanyIdAndDeletedFalse(invoiceNumber, currentCompany)
                 .orElseThrow(() -> new ResourceNotFoundException("No invoice with the number " + invoiceNumber + " found."));
     }
@@ -156,14 +136,14 @@ public class InvoiceService implements IInvoiceService{
     @Transactional(readOnly = true)
     @Override
     public Invoice getInvoiceForPdf(String invoiceNumber) {
-        UUID currentCompany = requireCompanyId("No invoice with the number " + invoiceNumber + " found.");
+        UUID currentCompany = companySecurityService.requireCurrentCompanyId("Company context required");
         return invoiceRepository.findByInvoiceNumberForPdfAndCompanyId(invoiceNumber, currentCompany)
                 .orElseThrow(() -> new ResourceNotFoundException("No invoice with the number " + invoiceNumber + " found."));
     }
 
     @Override
     public Page<Invoice> getAllInvoices(Pageable pageable) {
-        UUID currentCompany = requireCompanyId("Invoice fetching failed");
+        UUID currentCompany = companySecurityService.requireCurrentCompanyId("Company context required");
         return invoiceRepository.findByCompanyIdAndDeletedFalseOrderByIssueDateDesc(currentCompany, pageable);
     }
 
@@ -238,15 +218,19 @@ public class InvoiceService implements IInvoiceService{
     }
 
     @Override
-    public void markOverdueInvoices() {
+    public void markOverdueInvoicesForCompany(UUID companyId) {
+        if (companyId == null) {
+            throw new IllegalArgumentException("Company id is required");
+        }
         LocalDate today = LocalDate.now();
         List<InvoiceStatus> eligibleStatuses = List.of(InvoiceStatus.SENT);
-        UUID currentCompanyId = companySecurityService.getCurrentCompanyId();
-        if (currentCompanyId != null) {
-            processOverdueInvoicesForCompany(currentCompanyId, today, eligibleStatuses);
-            return;
-        }
+        processOverdueInvoicesForCompany(companyId, today, eligibleStatuses);
+    }
 
+    @Override
+    public void markOverdueInvoicesForAllCompanies() {
+        LocalDate today = LocalDate.now();
+        List<InvoiceStatus> eligibleStatuses = List.of(InvoiceStatus.SENT);
         List<Company> companies = companyRepository.findAll();
         for (Company company : companies) {
             processOverdueInvoicesForCompany(company.getId(), today, eligibleStatuses);
@@ -255,14 +239,10 @@ public class InvoiceService implements IInvoiceService{
 
     @Override
     public Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable) {
-        UUID currentCompanyId = requireAuthenticatedCompanyId("Invoices can only be queried in the authenticated company");
-        if (criteria.getCompanyId() != null && !currentCompanyId.equals(criteria.getCompanyId())) {
-            throw new AccessDeniedException("Invoices can only be queried in the authenticated company");
-        }
+        UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
 
         Specification<Invoice> spec = Specification
-                .where(hasCompanyId(currentCompanyId))
-                .and(notDeleted())
+                .where(visibleToCompany(currentCompanyId))
                 .and(hasStatus(criteria.getStatus()))
                 .and(hasClientId(criteria.getClientId()))
                 .and(clientNameContains(criteria.getClientName()))
@@ -293,24 +273,14 @@ public class InvoiceService implements IInvoiceService{
         if (request.getClientId() != null) {
             client = clientService.get(request.getClientId());
         } else if (request.getNewClient() != null) {
-            client = clientService.create(copyClientRequest(request.getNewClient()));
+            client = clientService.create(request.getNewClient());
         } else {
             throw new IllegalArgumentException("Either clientId or newClient is required.");
         }
 
         if (client.getCompany() == null || !currentCompanyId.equals(client.getCompany().getId())) {
-            throw new AccessDeniedException("Client does not belong to the authenticated company");
+            throw new ResourceNotFoundException("Client not found");
         }
         return client;
-    }
-
-    private CreateClientRequest copyClientRequest(CreateClientRequest request) {
-        return CreateClientRequest.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .phoneNumber(request.getPhoneNumber())
-                .vatNumber(request.getVatNumber())
-                .address(request.getAddress())
-                .build();
     }
 }

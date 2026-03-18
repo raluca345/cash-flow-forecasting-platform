@@ -27,7 +27,9 @@ public interface IInvoiceService {
 
     Invoice editInvoice(String invoiceNumber, UpdateInvoiceDraftPartialRequest request);
 
-    void markOverdueInvoices();
+    void markOverdueInvoicesForCompany(java.util.UUID companyId);
+
+    void markOverdueInvoicesForAllCompanies();
 
     Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable);
 }

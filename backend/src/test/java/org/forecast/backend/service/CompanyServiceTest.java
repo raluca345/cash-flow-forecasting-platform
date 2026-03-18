@@ -2,6 +2,7 @@ package org.forecast.backend.service;
 
 import org.forecast.backend.model.Company;
 import org.forecast.backend.dtos.company.UpdateCompanyRequest;
+import org.forecast.backend.exceptions.ResourceNotFoundException;
 import org.forecast.backend.repository.CompanyRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,9 +16,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,7 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
+        when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
         when(companyRepository.save(c)).thenAnswer(inv -> inv.getArgument(0));
 
@@ -54,6 +56,7 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
+        when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
 
         // First save throws DataIntegrityViolationException, second returns entity
@@ -73,6 +76,7 @@ class CompanyServiceTest {
         Company c = new Company();
         c.setId(id);
 
+        when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(id);
         when(companyRepository.findById(id)).thenReturn(Optional.of(c));
 
         // Always throw
@@ -82,19 +86,20 @@ class CompanyServiceTest {
     }
 
     @Test
-    void getById_rejectsCrossCompanyAccess() {
+    void getById_crossCompanyAccessReturnsNotFound() {
         UUID requestedCompanyId = UUID.randomUUID();
+        UUID currentCompanyId = UUID.randomUUID();
 
         Company c = new Company();
         c.setId(requestedCompanyId);
 
         when(companyRepository.findById(requestedCompanyId)).thenReturn(Optional.of(c));
         when(companySecurityService.isSystemAdmin()).thenReturn(false);
-        doThrow(new AccessDeniedException("Cannot access another company"))
-                .when(companySecurityService)
-                .assertCompanyAccess(eq(requestedCompanyId), any());
+        when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(currentCompanyId);
 
-        assertThrows(AccessDeniedException.class, () -> companyService.getById(requestedCompanyId));
+        ResourceNotFoundException ex =
+                assertThrows(ResourceNotFoundException.class, () -> companyService.getById(requestedCompanyId));
+        assertEquals("No company with id " + requestedCompanyId + " found.", ex.getMessage());
     }
 
     @Test

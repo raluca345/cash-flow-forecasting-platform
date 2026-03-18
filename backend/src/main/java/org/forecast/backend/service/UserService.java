@@ -143,7 +143,7 @@ public class UserService {
 
         UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Access denied.");
         if (request.getCompanyId() != null && !currentCompanyId.equals(request.getCompanyId())) {
-            throw new AccessDeniedException("Users can only be created in the authenticated company.");
+            throw new ResourceNotFoundException("No company with id " + request.getCompanyId() + " found.");
         }
         if (request.getCompanyInviteCode() != null && !request.getCompanyInviteCode().isBlank()) {
             throw new IllegalArgumentException("Company admins cannot use invite codes when creating users.");
