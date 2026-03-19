@@ -154,6 +154,7 @@ build/
 uploads/
 AGENTS.md
 backend/src/test/resources/application-test.properties
+frontend/dist/
 backend/.idea/*
 !backend/.idea/codeStyles
 !backend/.idea/codeStyles/**

@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom";
 import AuthShowcasePanel from "../components/auth/AuthShowcasePanel";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -19,11 +20,11 @@ export default function LoginPage() {
               Forecast
             </p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
-              Sign in to your workspace
+              Create your workspace account
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Track invoices, monitor recurring income, and keep cash flow in
-              view from one place.
+              Join your company workspace with an invite code and start tracking
+              invoices, recurring revenue, and runway in one place.
             </p>
           </div>
 
@@ -33,15 +34,22 @@ export default function LoginPage() {
                 Forecast
               </p>
               <h1 className="mt-0 text-3xl font-semibold tracking-tight text-slate-950 lg:mt-4">
-                Sign in to your workspace
+                Create your account
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Use your company account to manage invoices, recurring revenue,
-                and cash runway.
+                Use your company invite code to join your team and access
+                invoices, recurring revenue, and cash-flow visibility.
               </p>
             </div>
 
             <form className="mt-8 space-y-5">
+              <Input
+                label="Full name"
+                type="text"
+                placeholder="Jane Doe"
+                className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+              />
+
               <Input
                 label="Work email"
                 type="email"
@@ -50,9 +58,16 @@ export default function LoginPage() {
               />
 
               <Input
+                label="Invite code"
+                type="text"
+                placeholder="Enter your company invite code"
+                className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+              />
+
+              <Input
                 label="Password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder="Create a password"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
                 trailingElement={
                   <button
@@ -72,25 +87,39 @@ export default function LoginPage() {
                 }
               />
 
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <label className="flex items-center gap-2 text-slate-600">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  Remember me
-                </label>
+              <Input
+                label="Confirm password"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Repeat your password"
+                className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                trailingElement={
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirmPassword((current) => !current)
+                    }
+                    className="text-slate-400 transition hover:text-indigo-600"
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide password confirmation"
+                        : "Show password confirmation"
+                    }
+                    aria-pressed={showConfirmPassword}
+                  >
+                    <FontAwesomeIcon
+                      icon={showConfirmPassword ? faEyeSlash : faEye}
+                      className="h-4 w-4"
+                    />
+                  </button>
+                }
+              />
 
-                <button
-                  type="button"
-                  className="font-medium text-indigo-600 transition hover:text-indigo-700"
-                >
-                  Forgot password?
-                </button>
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
+                Your invite code links this account to your company workspace.
               </div>
 
               <Button type="submit" className="h-11 w-full rounded-xl">
-                Sign In
+                Create Account
               </Button>
             </form>
 
@@ -105,15 +134,20 @@ export default function LoginPage() {
             <Button
               variant="secondary"
               type="button"
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate("/login")}
               className="h-11 w-full rounded-xl"
             >
-              Sign Up
+              Back to Sign In
             </Button>
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              Need an invite code? Contact your company admin or platform
-              administrator.
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-medium text-indigo-600 transition hover:text-indigo-700"
+              >
+                Sign in here
+              </Link>
             </p>
           </div>
         </div>
