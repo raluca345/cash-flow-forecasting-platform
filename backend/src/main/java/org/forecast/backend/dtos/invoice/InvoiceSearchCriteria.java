@@ -49,5 +49,19 @@ public class InvoiceSearchCriteria {
     private Instant paidAtFrom;
 
     private Instant paidAtTo;
+
+    public void validateRanges() {
+        validateRange(minAmount, maxAmount, "Minimum amount cannot be greater than maximum amount");
+        validateRange(dueDateFrom, dueDateTo, "Due date from cannot be after due date to");
+        validateRange(issueDateFrom, issueDateTo, "Issue date from cannot be after issue date to");
+        validateRange(sentAtFrom, sentAtTo, "Sent-at from cannot be after sent-at to");
+        validateRange(paidAtFrom, paidAtTo, "Paid-at from cannot be after paid-at to");
+    }
+
+    private static <T extends Comparable<? super T>> void validateRange(T from, T to, String message) {
+        if (from != null && to != null && from.compareTo(to) > 0) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 }
 

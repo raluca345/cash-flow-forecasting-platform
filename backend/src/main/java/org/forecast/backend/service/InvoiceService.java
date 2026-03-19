@@ -239,6 +239,7 @@ public class InvoiceService implements IInvoiceService{
 
     @Override
     public Page<Invoice> filterByCriteria(InvoiceSearchCriteria criteria, Pageable pageable) {
+        criteria.validateRanges();
         UUID currentCompanyId = companySecurityService.requireCurrentCompanyId("Company context required");
 
         Specification<Invoice> spec = Specification

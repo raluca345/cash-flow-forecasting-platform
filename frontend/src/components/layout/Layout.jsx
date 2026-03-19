@@ -1,4 +1,18 @@
+import { useNavigate } from "react-router-dom";
+import Button from "../ui/Button";
+import useAuthStore from "../../store/authStore";
+
 export default function Layout({ children }) {
+  const name = useAuthStore((state) => state.name);
+  const role = useAuthStore((state) => state.role);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    clearAuth();
+    navigate("/login", { replace: true });
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
@@ -31,8 +45,24 @@ export default function Layout({ children }) {
         {/* Top bar */}
         <header className="h-16 bg-white border-b flex items-center justify-between px-6">
           <div className="font-medium text-gray-800">Dashboard</div>
-          {/*TODO: add login/signup buttons here or the user's pfp + username*/}
-          <div className="text-gray-800">User</div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log Out
+            </Button>
+
+            <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-2 py-1.5">
+              <div className="h-9 w-9 rounded-full border border-indigo-200 bg-indigo-100" />
+
+              <div className="text-right pr-2">
+                <div className="font-medium text-gray-800">{name ?? "User"}</div>
+                {role && (
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {role.replaceAll("_", " ")}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </header>
 
         {/* Page content */}

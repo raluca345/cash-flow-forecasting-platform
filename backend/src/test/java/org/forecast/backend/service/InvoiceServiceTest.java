@@ -570,6 +570,38 @@ class InvoiceServiceTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
+  void filterByCriteria_whenMinAmountExceedsMaxAmount_throwsIllegalArgumentException() {
+    InvoiceSearchCriteria criteria = new InvoiceSearchCriteria();
+    criteria.setMinAmount(new BigDecimal("200.00"));
+    criteria.setMaxAmount(new BigDecimal("100.00"));
+
+    IllegalArgumentException ex =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> invoiceService.filterByCriteria(criteria, PageRequest.of(0, 10)));
+
+    assertEquals("Minimum amount cannot be greater than maximum amount", ex.getMessage());
+    verify(invoiceRepository, never()).findAll((Specification<Invoice>) any(), any(Pageable.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void filterByCriteria_whenDueDateRangeIsInverted_throwsIllegalArgumentException() {
+    InvoiceSearchCriteria criteria = new InvoiceSearchCriteria();
+    criteria.setDueDateFrom(LocalDate.of(2024, 12, 31));
+    criteria.setDueDateTo(LocalDate.of(2024, 1, 1));
+
+    IllegalArgumentException ex =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> invoiceService.filterByCriteria(criteria, PageRequest.of(0, 10)));
+
+    assertEquals("Due date from cannot be after due date to", ex.getMessage());
+    verify(invoiceRepository, never()).findAll((Specification<Invoice>) any(), any(Pageable.class));
+  }
+
+  @Test
     void markOverdueInvoicesForAllCompanies_processesAllCompanies() {
     UUID companyAId = UUID.randomUUID();
     UUID companyBId = UUID.randomUUID();

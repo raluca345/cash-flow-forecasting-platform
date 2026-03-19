@@ -5,11 +5,79 @@ import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import AuthShowcasePanel from "../components/auth/AuthShowcasePanel";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import { signup } from "../api/authApi";
+import { validateSignupForm } from "../lib/validation";
+import useAuthStore from "../store/authStore";
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    companyInviteCode: "",
+  });
+
   const navigate = useNavigate();
+  const setAuthSession = useAuthStore((state) => state.setAuthSession);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
+
+    const nextErrors = validateSignupForm(form);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setFormError("Please fix the errors below");
+      return;
+    }
+
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await signup({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        companyInviteCode: form.companyInviteCode.trim(),
+      });
+      setAuthSession(response, true);
+      navigate("/");
+    } catch (error) {
+      setFieldErrors(error.fieldErrors ?? {});
+      setFormError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  function updateField(field, value) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
+    setFieldErrors((current) => {
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+
+      if (field === "password" || field === "confirmPassword") {
+        delete nextErrors.confirmPassword;
+      }
+
+      return nextErrors;
+    });
+    setFormError("");
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 lg:flex">
@@ -42,12 +110,21 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <form className="mt-8 space-y-5">
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+              {formError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
               <Input
                 label="Full name"
                 type="text"
                 placeholder="Jane Doe"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                error={fieldErrors.name}
               />
 
               <Input
@@ -55,6 +132,9 @@ export default function SignupPage() {
                 type="email"
                 placeholder="you@company.com"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                error={fieldErrors.email}
               />
 
               <Input
@@ -62,6 +142,11 @@ export default function SignupPage() {
                 type="text"
                 placeholder="Enter your company invite code"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.companyInviteCode}
+                onChange={(e) =>
+                  updateField("companyInviteCode", e.target.value)
+                }
+                error={fieldErrors.companyInviteCode}
               />
 
               <Input
@@ -69,6 +154,9 @@ export default function SignupPage() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Create a password"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.password}
+                onChange={(e) => updateField("password", e.target.value)}
+                error={fieldErrors.password}
                 trailingElement={
                   <button
                     type="button"
@@ -92,6 +180,9 @@ export default function SignupPage() {
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Repeat your password"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.confirmPassword}
+                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                error={fieldErrors.confirmPassword}
                 trailingElement={
                   <button
                     type="button"
@@ -118,8 +209,12 @@ export default function SignupPage() {
                 Your invite code links this account to your company workspace.
               </div>
 
-              <Button type="submit" className="h-11 w-full rounded-xl">
-                Create Account
+              <Button
+                type="submit"
+                className="h-11 w-full rounded-xl"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             </form>
 

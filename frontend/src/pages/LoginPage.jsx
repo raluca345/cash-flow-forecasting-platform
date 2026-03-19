@@ -3,12 +3,74 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import AuthShowcasePanel from "../components/auth/AuthShowcasePanel";
+import { login } from "../api/authApi";
+import { validateLoginForm } from "../lib/validation";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import useAuthStore from "../store/authStore";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    rememberMe: true,
+  });
+
   const navigate = useNavigate();
+  const setAuthSession = useAuthStore((state) => state.setAuthSession);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
+
+    const nextErrors = validateLoginForm(form);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setFormError("Please fix the errors below");
+      return;
+    }
+
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await login({
+        email: form.email.trim(),
+        password: form.password,
+      });
+      setAuthSession(response, form.rememberMe);
+      navigate("/");
+    } catch (error) {
+      setFieldErrors(error.fieldErrors ?? {});
+      setFormError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function updateField(field, value) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+    setFormError("");
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 lg:flex">
@@ -41,12 +103,21 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form className="mt-8 space-y-5">
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+              {formError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+
               <Input
                 label="Work email"
                 type="email"
                 placeholder="you@company.com"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.email}
+                onChange={(event) => updateField("email", event.target.value)}
+                error={fieldErrors.email}
               />
 
               <Input
@@ -54,6 +125,11 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
+                value={form.password}
+                onChange={(event) =>
+                  updateField("password", event.target.value)
+                }
+                error={fieldErrors.password}
                 trailingElement={
                   <button
                     type="button"
@@ -77,6 +153,10 @@ export default function LoginPage() {
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={form.rememberMe}
+                    onChange={(event) =>
+                      updateField("rememberMe", event.target.checked)
+                    }
                   />
                   Remember me
                 </label>
@@ -89,8 +169,12 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              <Button type="submit" className="h-11 w-full rounded-xl">
-                Sign In
+              <Button
+                type="submit"
+                className="h-11 w-full rounded-xl"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 

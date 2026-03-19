@@ -66,6 +66,10 @@ public class JwtService {
         });
   }
 
+  public String extractName(String token) {
+    return extractClaim(token, claims -> claims.get("name", String.class));
+  }
+
   public UUID extractCompanyId(String token) {
     String id = extractClaim(token, claims -> claims.get("companyId", String.class));
     if (id == null || id.isBlank()) {

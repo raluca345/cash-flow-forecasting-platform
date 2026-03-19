@@ -8,7 +8,7 @@ import org.forecast.backend.enums.InvoiceStatus;
 import org.forecast.backend.model.Invoice;
 import org.springframework.data.jpa.domain.Specification;
 
-public class InvoiceSpecifications {
+public final class InvoiceSpecifications {
 
   public static Specification<Invoice> visibleToCompany(UUID companyId) {
     return hasCompanyId(companyId).and(notDeleted());
@@ -29,32 +29,39 @@ public class InvoiceSpecifications {
   }
 
   public static Specification<Invoice> clientNameContains(String clientName) {
-    return (root, query, cb) ->
-        clientName == null
-            ? cb.conjunction()
-            : cb.like(
-                cb.lower(root.get("client").get("name")), "%" + clientName.toLowerCase() + "%");
+    return (root, query, cb) -> {
+      if (clientName == null || clientName.isBlank()) return cb.conjunction();
+      return cb.like(
+          cb.lower(root.get("client").get("name")), "%" + clientName.trim().toLowerCase() + "%");
+    };
   }
 
   public static Specification<Invoice> hasCompanyId(UUID companyId) {
-    return (root, query, cb) -> companyId == null ? cb.conjunction() : cb.equal(root.get("company").get("id"), companyId);
+    if (companyId == null) {
+      throw new IllegalArgumentException("companyId is required");
+    }
+    return (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
   }
 
   public static Specification<Invoice> invoiceNumberContains(String invoiceNumber) {
-    return (root, query, cb) ->
-        invoiceNumber == null
-            ? cb.conjunction()
-            : cb.like(cb.lower(root.get("invoiceNumber")), "%" + invoiceNumber.toLowerCase() + "%");
+    return (root, query, cb) -> {
+      if (invoiceNumber == null || invoiceNumber.isBlank()) return cb.conjunction();
+      return cb.like(cb.lower(root.get("invoiceNumber")), "%" + invoiceNumber.toLowerCase() + "%");
+    };
   }
 
   public static Specification<Invoice> amountGreaterThan(BigDecimal minAmount) {
     return (root, query, cb) ->
-        minAmount == null ? cb.conjunction() : cb.greaterThanOrEqualTo(root.get("grossTotal"), minAmount);
+        minAmount == null
+            ? cb.conjunction()
+            : cb.greaterThanOrEqualTo(root.get("grossTotal"), minAmount);
   }
 
   public static Specification<Invoice> amountLessThan(BigDecimal maxAmount) {
     return (root, query, cb) ->
-        maxAmount == null ? cb.conjunction() : cb.lessThanOrEqualTo(root.get("grossTotal"), maxAmount);
+        maxAmount == null
+            ? cb.conjunction()
+            : cb.lessThanOrEqualTo(root.get("grossTotal"), maxAmount);
   }
 
   public static Specification<Invoice> dueDateFrom(LocalDate dueDate) {
@@ -92,9 +99,8 @@ public class InvoiceSpecifications {
     return (root, query, cb) -> {
       if (isUnpaid == null || !isUnpaid) return cb.conjunction();
       return cb.or(
-              cb.equal(root.get("status"), InvoiceStatus.SENT),
-              cb.equal(root.get("status"), InvoiceStatus.OVERDUE)
-      );
+          cb.equal(root.get("status"), InvoiceStatus.SENT),
+          cb.equal(root.get("status"), InvoiceStatus.OVERDUE));
     };
   }
 

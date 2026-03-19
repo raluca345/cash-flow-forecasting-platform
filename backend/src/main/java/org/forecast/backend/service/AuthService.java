@@ -32,19 +32,7 @@ public class AuthService {
                 .build();
 
         User user = userService.create(createReq);
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", user.getRole().name());
-        if (user.getCompany() != null) {
-            claims.put("companyId", user.getCompany().getId().toString());
-        }
-
-        String token = jwtService.generateToken(claims, user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .role(user.getRole().name())
-                .build();
+        return buildAuthResponse(user);
     }
 
     @Transactional
@@ -56,9 +44,13 @@ public class AuthService {
                 )
         );
         User user = userService.getByEmail(request.getEmail());
+        return buildAuthResponse(user);
+    }
 
+    private AuthResponse buildAuthResponse(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
+        claims.put("name", user.getName());
         if (user.getCompany() != null) {
             claims.put("companyId", user.getCompany().getId().toString());
         }
