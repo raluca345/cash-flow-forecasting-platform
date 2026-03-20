@@ -5,7 +5,9 @@ const FRIENDLY_MESSAGE_MAP = {
     "This invite code has expired. Ask your company admin for a new one",
   "Invalid or expired company invite code":
     "That invite code is invalid or expired",
-  "Bad credentials": "Incorrect email or password",
+  "Bad credentials": "Email and password don't match",
+  "Invalid credentials": "Email and password don't match",
+  "Email and password don't match": "Email and password don't match",
   "Company context required":
     "You need to sign in again before continuing",
   "An unexpected error occurred. Please try again later.":
@@ -29,7 +31,7 @@ const FRIENDLY_FIELD_MESSAGE_MAP = {
 
 export function normalizeAuthApiError(error) {
   const normalizedError = new Error(
-    getFriendlyAuthErrorMessage(error?.rawMessage ?? error?.message)
+    getFriendlyAuthErrorMessage(error?.rawMessage ?? error?.message, error?.status)
   );
   normalizedError.status = error?.status;
   normalizedError.code = error?.code;
@@ -39,9 +41,17 @@ export function normalizeAuthApiError(error) {
   return normalizedError;
 }
 
-export function getFriendlyAuthErrorMessage(message) {
+export function getFriendlyAuthErrorMessage(message, status) {
+  if (isNetworkFailure(status, message)) {
+    return "We couldn't reach the server. Check your internet connection and try again";
+  }
+
   if (!message) {
     return "Something went wrong. Please try again";
+  }
+
+  if (status === 401) {
+    return "Email and password don't match";
   }
 
   return FRIENDLY_MESSAGE_MAP[message] ?? normalizeMessage(message);
@@ -62,4 +72,18 @@ function normalizeMessage(message) {
   }
 
   return message.replace(/\.$/, "");
+}
+
+function isNetworkFailure(status, message) {
+  if (status != null) {
+    return false;
+  }
+
+  const normalized = String(message ?? "").toLowerCase();
+  return (
+    normalized.includes("networkerror") ||
+    normalized.includes("failed to fetch") ||
+    normalized.includes("load failed") ||
+    normalized.includes("network request failed")
+  );
 }

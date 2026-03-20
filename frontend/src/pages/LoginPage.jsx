@@ -81,15 +81,15 @@ export default function LoginPage() {
               Forecast
             </p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
-              Sign in to your workspace
+              Welcome back to your finance dashboard
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Track invoices, monitor recurring income, and keep cash flow in
-              view from one place.
+              See where cash is going, what is coming in, and what decisions to
+              make next with confidence.
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.28)] sm:p-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/20 sm:p-8">
             <div>
               <p className="hidden text-xs font-semibold uppercase tracking-[0.28em] text-indigo-600 lg:block">
                 Forecast
@@ -98,8 +98,8 @@ export default function LoginPage() {
                 Sign in to your workspace
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Use your company account to manage invoices, recurring revenue,
-                and cash runway.
+                Access real-time cash visibility, track income and expenses, and
+                review simple forecast charts with summary notifications.
               </p>
             </div>
 
@@ -174,7 +174,7 @@ export default function LoginPage() {
                 className="h-11 w-full rounded-xl"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Signing in..." : "Sign In"}
+                {isSubmitting ? "Signing you in..." : "Sign In"}
               </Button>
             </form>
 
@@ -196,8 +196,7 @@ export default function LoginPage() {
             </Button>
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              Need an invite code? Contact your company admin or platform
-              administrator.
+              Need access? Ask your workspace admin for an invite code.
             </p>
           </div>
         </div>

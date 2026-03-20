@@ -3,3 +3,19 @@
 body {
   margin: 0;
 }
+
+.auth-showcase-glow {
+  --auth-glow-indigo: color-mix(in oklab, var(--color-indigo-500) 20%, transparent);
+  --auth-glow-sky: color-mix(in oklab, var(--color-sky-400) 14%, transparent);
+  background-image:
+    radial-gradient(circle at top right, var(--auth-glow-indigo), transparent 32%),
+    radial-gradient(circle at bottom left, var(--auth-glow-sky), transparent 28%);
+}
+
+.auth-showcase-grid {
+  --auth-grid-line: color-mix(in oklab, white 4%, transparent);
+  background-image:
+    linear-gradient(var(--auth-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--auth-grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

@@ -88,25 +88,26 @@ export default function SignupPage() {
               Forecast
             </p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
-              Create your workspace account
+              Create your finance command center
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Join your company workspace with an invite code and start tracking
-              invoices, recurring revenue, and runway in one place.
+              Join your company workspace and turn invoices, recurring revenue,
+              and upcoming costs into a clear cash-flow forecast your team can
+              act on.
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.28)] sm:p-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/20 sm:p-8">
             <div>
               <p className="hidden text-xs font-semibold uppercase tracking-[0.28em] text-indigo-600 lg:block">
                 Forecast
               </p>
               <h1 className="mt-0 text-3xl font-semibold tracking-tight text-slate-950 lg:mt-4">
-                Create your account
+                Create your workspace account
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Use your company invite code to join your team and access
-                invoices, recurring revenue, and cash-flow visibility.
+                Use your invite code to join your team, centralize cash data,
+                and get reliable forecasts for smarter business decisions.
               </p>
             </div>
 
@@ -138,7 +139,7 @@ export default function SignupPage() {
               />
 
               <Input
-                label="Invite code"
+                label="Company invite code"
                 type="text"
                 placeholder="Enter your company invite code"
                 className="h-11 border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500/30"
@@ -206,7 +207,8 @@ export default function SignupPage() {
               />
 
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">
-                Your invite code links this account to your company workspace.
+                Your invite code securely links this account to your company
+                workspace. Ask your admin if you need help finding it.
               </div>
 
               <Button
@@ -214,7 +216,9 @@ export default function SignupPage() {
                 className="h-11 w-full rounded-xl"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating account..." : "Create Account"}
+                {isSubmitting
+                  ? "Creating your workspace..."
+                  : "Create My Account"}
               </Button>
             </form>
 

@@ -1,27 +1,27 @@
 export default function AuthShowcasePanel() {
   return (
     <aside className="relative hidden overflow-hidden bg-slate-950 text-white lg:flex lg:w-[52%]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(56,189,248,0.14),transparent_28%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-size-[32px_32px]" />
+      <div className="auth-showcase-glow absolute inset-0" />
+      <div className="auth-showcase-grid absolute inset-0" />
 
       <div className="relative z-10 flex w-full flex-col justify-between px-10 py-12 xl:px-14 xl:py-16">
         <div className="max-w-md">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-300/85">
-            Cash Flow Forecasting Platform
+            Finance Clarity Platform
           </p>
 
           <h2 className="mt-5 text-4xl font-semibold leading-tight text-white xl:text-5xl">
-            See cash gaps before they happen
+            Lead with confidence, not guesswork
           </h2>
 
           <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300 xl:text-base">
-            Track invoices, recurring income, and runway visibility from one
-            workspace designed for freelancers and lean finance teams.
+            Built for accountants and business leaders to forecast income, catch
+            shortfalls early, and make board-ready decisions
           </p>
         </div>
 
         <div className="mt-12 max-w-xl space-y-4">
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
@@ -75,21 +75,21 @@ export default function AuthShowcasePanel() {
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                Overdue
+                Overdue Receivables
               </p>
               <p className="mt-2 text-lg font-semibold">$6,200</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                Recurring
+                Recurring Revenue
               </p>
               <p className="mt-2 text-lg font-semibold">$12,900</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                Paid On Time
+                On-Time Payments
               </p>
               <p className="mt-2 text-lg font-semibold">91%</p>
             </div>
@@ -98,13 +98,13 @@ export default function AuthShowcasePanel() {
 
         <div className="mt-10 flex flex-wrap gap-3 text-sm text-slate-300">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-            Invoice tracking
+            Board-ready forecasts
           </span>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-            Runway visibility
+            Summary notifications
           </span>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-            Revenue forecasting
+            Scenario modeling
           </span>
         </div>
       </div>

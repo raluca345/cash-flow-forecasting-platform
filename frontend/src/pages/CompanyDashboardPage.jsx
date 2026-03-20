@@ -1,8 +1,7 @@
-import Layout from "../components/layout/Layout";
 import BusinessHealthCard from "../components/ui/BusinessHealthCard";
 import Card from "../components/ui/Card";
 
-export default function DashboardPage() {
+export default function CompanyDashboardPage() {
   //TODO: when the analytics endpoint is implemented this function will be tied to
   //an useEffect hook
   function getBusinessHealthMetrics(data) {
@@ -79,8 +78,7 @@ export default function DashboardPage() {
   const data = getBusinessHealthMetrics(analytics);
 
   return (
-    <Layout>
-      {/* KPI cards */}
+    <>
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <BusinessHealthCard data={data} />
 
@@ -110,8 +108,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Chart area */}
       <Card className="h-85">Chart goes here</Card>
-    </Layout>
+    </>
   );
 }
