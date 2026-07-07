@@ -63,7 +63,7 @@ class UserControllerTest {
         u.setId(id);
         u.setName("Jane Doe");
         u.setEmail("jane@acme.test");
-        u.setRole(Role.FINANCE);
+        u.setRole(Role.COMPANY_MEMBER);
         u.setCompany(c);
         u.setProfilePictureUrl(null);
         return u;
@@ -208,13 +208,13 @@ class UserControllerTest {
         UUID companyId = UUID.randomUUID();
 
         UpdateUserRoleRequest req = UpdateUserRoleRequest.builder()
-                .role(Role.FINANCE)
+                .role(Role.COMPANY_MEMBER)
                 .build();
 
         User updated = user(userId, companyId);
-        updated.setRole(Role.FINANCE);
+        updated.setRole(Role.COMPANY_MEMBER);
 
-        when(userService.updateRole(eq(userId), eq(Role.FINANCE))).thenReturn(updated);
+        when(userService.updateRole(eq(userId), eq(Role.COMPANY_MEMBER))).thenReturn(updated);
 
         mockMvc.perform(patch("/api/v1/users/{id}/role", userId)
                         .with(csrf())
@@ -222,9 +222,9 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
-                .andExpect(jsonPath("$.role").value("FINANCE"));
+                .andExpect(jsonPath("$.role").value("COMPANY_MEMBER"));
 
-        verify(userService).updateRole(eq(userId), eq(Role.FINANCE));
+        verify(userService).updateRole(eq(userId), eq(Role.COMPANY_MEMBER));
     }
 
     @Test

@@ -41,8 +41,8 @@ class UserControllerRoleAccessTest {
     private UserDetailsService userDetailsService;
 
     @Test
-    @WithMockUser(roles = "FINANCE")
-    void financeRole_cannotListUsers_forbidden() throws Exception {
+    @WithMockUser(roles = "COMPANY_MEMBER")
+    void companyMemberRole_cannotListUsers_forbidden() throws Exception {
         var result = mockMvc.perform(get("/api/v1/users").accept(MediaType.APPLICATION_JSON))
                 .andReturn();
 

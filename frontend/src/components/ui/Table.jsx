@@ -1,29 +1,41 @@
-export default function Table({ columns, data }) {
+import clsx from "clsx";
+
+export default function Table({
+  columns,
+  data,
+  keyExtractor,
+  page,
+  totalPages,
+  onPageChange,
+}) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-100 text-slate-600">
-          <tr>
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-slate-200 text-left text-sm font-semibold text-slate-500">
+          {columns.map((col) => (
+            <th
+              key={col.key}
+              className={clsx("px-4 py-3", col.headerClassName)}
+            >
+              {col.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row) => (
+          <tr
+            key={keyExtractor(row)}
+            className="border-b border-slate-100 text-sm text-slate-700"
+          >
             {columns.map((col) => (
-              <th key={col.key} className="text-left px-4 py-3">
-                {col.label}
-              </th>
+              <td key={col.key} className={clsx("px-4 py-3", col.className)}>
+                {col.render ? col.render(row) : row[col.key] ?? "—"}
+              </td>
             ))}
           </tr>
-        </thead>
-
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i} className="border-t hover:bg-slate-50">
-              {columns.map((col) => (
-                <td key={col.key} className="px-4 py-3">
-                  {row[col.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
   );
 }

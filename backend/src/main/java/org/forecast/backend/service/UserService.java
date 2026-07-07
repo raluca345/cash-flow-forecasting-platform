@@ -105,7 +105,7 @@ public class UserService {
             return updateRoleAsSystemAdmin(id, role);
         }
         if (actorRole == Role.COMPANY_ADMIN) {
-            return promoteFinanceUserToCompanyAdmin(id, role);
+            return promoteCompanyMemberToCompanyAdmin(id, role);
         }
         throw new AccessDeniedException("Only system admins or company admins can update user roles.");
     }
@@ -174,13 +174,13 @@ public class UserService {
 
     private Role resolveRoleForCreate(CreateUserRequest request, Role currentRole) {
         if (currentRole == null) {
-            return Role.FINANCE;
+            return Role.COMPANY_MEMBER;
         }
 
         Role requestedRole = request.getRole();
         if (currentRole == Role.SYSTEM_ADMIN) {
             if (requestedRole == null) {
-                return Role.FINANCE;
+                return Role.COMPANY_MEMBER;
             }
             if (requestedRole == Role.SYSTEM_ADMIN) {
                 throw new IllegalArgumentException("SYSTEM_ADMIN cannot be assigned.");
@@ -189,10 +189,10 @@ public class UserService {
         }
 
         if (currentRole == Role.COMPANY_ADMIN) {
-            if (requestedRole == null || requestedRole == Role.FINANCE) {
-                return Role.FINANCE;
+            if (requestedRole == null || requestedRole == Role.COMPANY_MEMBER) {
+                return Role.COMPANY_MEMBER;
             }
-            throw new AccessDeniedException("Company admins can only create FINANCE users.");
+            throw new AccessDeniedException("Company admins can only create COMPANY_MEMBER users.");
         }
 
         throw new AccessDeniedException("Only company admins or system admins can create users.");
@@ -215,17 +215,17 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    private User promoteFinanceUserToCompanyAdmin(UUID id, Role role) {
+    private User promoteCompanyMemberToCompanyAdmin(UUID id, Role role) {
         if (role != Role.COMPANY_ADMIN) {
-            throw new AccessDeniedException("Company admins can only promote FINANCE users to COMPANY_ADMIN.");
+            throw new AccessDeniedException("Company admins can only promote COMPANY_MEMBER users to COMPANY_ADMIN.");
         }
 
         User user = getById(id);
         if (user.getRole() == Role.COMPANY_ADMIN) {
             return user;
         }
-        if (user.getRole() != Role.FINANCE) {
-            throw new IllegalArgumentException("Only FINANCE users can be promoted to COMPANY_ADMIN.");
+        if (user.getRole() != Role.COMPANY_MEMBER) {
+            throw new IllegalArgumentException("Only COMPANY_MEMBER users can be promoted to COMPANY_ADMIN.");
         }
 
         user.setRole(Role.COMPANY_ADMIN);

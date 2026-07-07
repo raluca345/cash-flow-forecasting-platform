@@ -23,6 +23,9 @@ function buildAuthState(token) {
   }
 
   const claims = extractTokenClaims(token);
+  if (!claims) {
+    return EMPTY_AUTH_STATE;
+  }
 
   return {
     token,

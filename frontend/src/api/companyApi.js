@@ -1,4 +1,8 @@
-import { apiFetch } from "./client";
+import { apiFetch } from "./httpClient";
+
+export async function listCompanies() {
+  return apiFetch("/companies");
+}
 
 export async function generateCompanyInviteCode(companyId) {
   if (!companyId) {

@@ -26,7 +26,7 @@ class CompanySecurityServiceTest {
     @Test
     void assertCompanyAccess_allowsMatchingTenantCompany() {
         UUID companyId = UUID.randomUUID();
-        setAuthentication(user(Role.FINANCE, companyId), companyId);
+        setAuthentication(user(Role.COMPANY_MEMBER, companyId), companyId);
 
         assertDoesNotThrow(() -> companySecurityService.assertCompanyAccess(companyId, "Access denied."));
     }

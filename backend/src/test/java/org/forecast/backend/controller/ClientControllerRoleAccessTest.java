@@ -58,8 +58,8 @@ class ClientControllerRoleAccessTest {
     }
 
     @Test
-    @WithMockUser(roles = "FINANCE")
-    void finance_canListClients_ok() throws Exception {
+    @WithMockUser(roles = "COMPANY_MEMBER")
+    void companyMember_canListClients_ok() throws Exception {
         when(clientService.listAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(client()), PageRequest.of(0, 10), 1));
 

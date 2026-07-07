@@ -2,8 +2,8 @@ package org.forecast.backend.service;
 
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.forecast.backend.dtos.company.CreateCompanyRequest;
 import org.forecast.backend.dtos.company.UpdateCompanyRequest;
@@ -116,7 +116,9 @@ public class CompanyService {
    * existing one.
    */
   public String generateInviteCode(UUID companyId) {
-    requireCompanyAdminCompanyAccess(companyId);
+    if (!companySecurityService.isSystemAdmin()) {
+      requireCompanyAdminCompanyAccess(companyId);
+    }
     Company company = getById(companyId);
 
     for (int attempt = 0; attempt < 5; attempt++) {

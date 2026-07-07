@@ -60,7 +60,7 @@ public class TestConfig {
                 List.of(
                     new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"),
                     new SimpleGrantedAuthority("ROLE_COMPANY_ADMIN"),
-                    new SimpleGrantedAuthority("ROLE_FINANCE")));
+                    new SimpleGrantedAuthority("ROLE_COMPANY_MEMBER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
         try {
           filterChain.doFilter(request, response);

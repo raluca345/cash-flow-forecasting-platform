@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.forecast.backend.model.Company;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +25,8 @@ public class CompanyResponse {
     private String website;
     private String iban;
     private String vatNumber;
+    private String inviteCode;
+    private Instant inviteCodeExpiresAt;
 
     public static CompanyResponse fromEntity(Company company) {
         if (company == null) return null;
@@ -37,6 +40,8 @@ public class CompanyResponse {
                 .website(company.getWebsite())
                 .iban(company.getIban())
                 .vatNumber(company.getVatNumber())
+                .inviteCode(company.getInviteCode())
+                .inviteCodeExpiresAt(company.getInviteCodeExpiresAt())
                 .build();
     }
 

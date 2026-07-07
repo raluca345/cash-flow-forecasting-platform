@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -54,7 +55,7 @@ class AuthControllerTest {
     req.setCompanyInviteCode("INV12345");
 
     when(authService.signup(any(SignupRequest.class)))
-        .thenReturn(AuthResponse.builder().token("jwt-abc").role("FINANCE").build());
+        .thenReturn(AuthResponse.builder().token("jwt-abc").role("COMPANY_MEMBER").build());
 
     mockMvc
         .perform(
@@ -63,7 +64,7 @@ class AuthControllerTest {
                 .content(objectMapper.writeValueAsString(req)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.token").value("jwt-abc"))
-        .andExpect(jsonPath("$.role").value("FINANCE"));
+        .andExpect(jsonPath("$.role").value("COMPANY_MEMBER"));
   }
 
   @Test
@@ -143,7 +144,7 @@ class AuthControllerTest {
     req.setPassword("password1");
 
     when(authService.login(any(AuthRequest.class)))
-        .thenReturn(AuthResponse.builder().token("jwt-login").role("FINANCE").build());
+        .thenReturn(AuthResponse.builder().token("jwt-login").role("COMPANY_MEMBER").build());
 
     mockMvc
         .perform(
@@ -152,7 +153,7 @@ class AuthControllerTest {
                 .content(objectMapper.writeValueAsString(req)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.token").value("jwt-login"))
-        .andExpect(jsonPath("$.role").value("FINANCE"));
+        .andExpect(jsonPath("$.role").value("COMPANY_MEMBER"));
   }
 
   @Test
@@ -196,6 +197,25 @@ class AuthControllerTest {
   }
 
   @Test
+  void login_badCredentials_returns401() throws Exception {
+    AuthRequest req = new AuthRequest();
+    req.setEmail("alice@test.com");
+    req.setPassword("wrong-password");
+
+    when(authService.login(any(AuthRequest.class)))
+        .thenThrow(new BadCredentialsException("Bad credentials"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
+        .andExpect(jsonPath("$.message").value("Email and password don't match"));
+  }
+
+  @Test
   void me_returnsCurrentUser() throws Exception {
     UUID companyId = UUID.randomUUID();
 
@@ -208,7 +228,7 @@ class AuthControllerTest {
     user.setId(UUID.randomUUID());
     user.setName("Alice");
     user.setEmail("alice@test.com");
-    user.setRole(Role.FINANCE);
+    user.setRole(Role.COMPANY_MEMBER);
     user.setCompany(company);
 
     when(userService.getByEmail("alice@test.com")).thenReturn(user);
@@ -219,7 +239,7 @@ class AuthControllerTest {
                 .principal(new UsernamePasswordAuthenticationToken("alice@test.com", null)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.email").value("alice@test.com"))
-        .andExpect(jsonPath("$.role").value("FINANCE"))
+        .andExpect(jsonPath("$.role").value("COMPANY_MEMBER"))
         .andExpect(jsonPath("$.company.id").value(companyId.toString()))
         .andExpect(jsonPath("$.company.name").value("Acme"));
   }

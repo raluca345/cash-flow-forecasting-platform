@@ -1,13 +1,13 @@
 package org.forecast.backend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.forecast.backend.dtos.shared.ErrorResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -22,9 +22,9 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(
-            HttpServletRequest request,
+            @NonNull HttpServletRequest request,
             HttpServletResponse response,
-            AuthenticationException authException
+            @NonNull AuthenticationException authException
     ) throws IOException {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(Instant.now())

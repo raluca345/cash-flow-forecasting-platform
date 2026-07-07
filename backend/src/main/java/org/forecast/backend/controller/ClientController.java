@@ -25,28 +25,28 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<PaginatedResponse<ClientResponse>> listClients(
             @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(ClientResponse.toPaginatedResponse(clientService.listAll(pageable)));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<ClientResponse> createClient(@Valid @RequestBody CreateClientRequest request) {
         Client created = clientService.create(request);
         return ResponseEntity.ok(ClientResponse.fromEntity(created));
     }
 
     @GetMapping("/{clientId}")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<ClientResponse> getClient(@PathVariable UUID clientId) {
         Client client = clientService.get(clientId);
         return ResponseEntity.ok(ClientResponse.fromEntity(client));
     }
 
     @PatchMapping("/{clientId}")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<ClientResponse> updateClient(
             @PathVariable UUID clientId,
             @Valid @RequestBody UpdateClientRequest request

@@ -48,7 +48,7 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void create_selfSignupEncodesPasswordAndDefaultsRoleToFinance() {
+    void create_selfSignupEncodesPasswordAndDefaultsRoleToCompanyMember() {
         Company company = new Company();
         company.setId(UUID.randomUUID());
 
@@ -75,7 +75,7 @@ class UserServiceTest {
         assertEquals("Jane Doe", created.getName());
         assertEquals("jane@acme.test", created.getEmail());
         assertEquals("encoded-secret", created.getPassword());
-        assertEquals(Role.FINANCE, created.getRole());
+        assertEquals(Role.COMPANY_MEMBER, created.getRole());
         assertEquals(company, created.getCompany());
         assertEquals("/uploads/tmp/jane.png", created.getProfilePictureUrl());
 
@@ -165,11 +165,11 @@ class UserServiceTest {
     @Test
     void updateRole_requiresSystemAdmin() {
         UUID userId = UUID.randomUUID();
-        when(companySecurityService.getCurrentRole()).thenReturn(Role.FINANCE);
+        when(companySecurityService.getCurrentRole()).thenReturn(Role.COMPANY_MEMBER);
 
         assertThrows(
                 AccessDeniedException.class,
-                () -> userService.updateRole(userId, Role.FINANCE)
+                () -> userService.updateRole(userId, Role.COMPANY_MEMBER)
         );
 
         verify(userRepository, never()).findById(any());
@@ -182,7 +182,7 @@ class UserServiceTest {
 
         User existing = new User();
         existing.setId(userId);
-        existing.setRole(Role.FINANCE);
+        existing.setRole(Role.COMPANY_MEMBER);
 
         when(companySecurityService.getCurrentRole()).thenReturn(Role.SYSTEM_ADMIN);
         when(companySecurityService.isSystemAdmin()).thenReturn(true);
@@ -216,26 +216,26 @@ class UserServiceTest {
 
         User existing = new User();
         existing.setId(userId);
-        existing.setRole(Role.FINANCE);
+        existing.setRole(Role.COMPANY_MEMBER);
 
         when(companySecurityService.getCurrentRole()).thenReturn(Role.SYSTEM_ADMIN);
         when(companySecurityService.isSystemAdmin()).thenReturn(true);
         when(userRepository.findById(userId)).thenReturn(Optional.of(existing));
 
-        User updated = userService.updateRole(userId, Role.FINANCE);
+        User updated = userService.updateRole(userId, Role.COMPANY_MEMBER);
 
         assertSame(existing, updated);
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    void updateRole_companyAdminCanPromoteFinanceUserToCompanyAdmin() {
+    void updateRole_companyAdminCanPromoteCompanyMemberToCompanyAdmin() {
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
 
         User existing = new User();
         existing.setId(userId);
-        existing.setRole(Role.FINANCE);
+        existing.setRole(Role.COMPANY_MEMBER);
 
         when(companySecurityService.getCurrentRole()).thenReturn(Role.COMPANY_ADMIN);
         when(companySecurityService.requireCurrentCompanyId(any())).thenReturn(companyId);
@@ -249,16 +249,16 @@ class UserServiceTest {
     }
 
     @Test
-    void updateRole_companyAdminCannotAssignFinance() {
+    void updateRole_companyAdminCannotAssignCompanyMember() {
         UUID userId = UUID.randomUUID();
         when(companySecurityService.getCurrentRole()).thenReturn(Role.COMPANY_ADMIN);
 
         AccessDeniedException ex = assertThrows(
                 AccessDeniedException.class,
-                () -> userService.updateRole(userId, Role.FINANCE)
+                () -> userService.updateRole(userId, Role.COMPANY_MEMBER)
         );
 
-        assertTrue(ex.getMessage().contains("promote FINANCE users"));
+        assertTrue(ex.getMessage().contains("promote COMPANY_MEMBER users"));
         verify(userRepository, never()).findById(any());
         verify(userRepository, never()).save(any(User.class));
     }

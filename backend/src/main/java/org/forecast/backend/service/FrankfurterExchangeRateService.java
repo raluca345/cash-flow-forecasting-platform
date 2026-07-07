@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Primary
@@ -77,11 +78,10 @@ public class FrankfurterExchangeRateService implements ExchangeRateService {
 
         Instant now = Instant.now();
 
-        // Load existing rows once and update in-memory to avoid a query per currency.
         List<ExchangeRates> existing = exchangeRatesRepository.findByFromCurrency(base);
 
         Map<String, ExchangeRates> byToCurrency = existing.stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         ExchangeRates::getToCurrency,
                         e -> e,
                         (a, b) -> a

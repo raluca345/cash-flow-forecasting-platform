@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { generateCompanyInviteCode } from "../api/companyApi";
+import { formatExpiration } from "../lib/formatDate";
 import useAuthStore from "../store/authStore";
 
 export default function InviteCodesPage() {
@@ -12,22 +13,6 @@ export default function InviteCodesPage() {
   const [expiresAt, setExpiresAt] = useState("");
   const [formError, setFormError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const formattedExpiration = useMemo(() => {
-    if (!expiresAt) {
-      return "";
-    }
-
-    const date = new Date(expiresAt);
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
-  }, [expiresAt]);
 
   if (role !== "COMPANY_ADMIN") {
     return <Navigate to="/app" replace />;
@@ -78,8 +63,8 @@ export default function InviteCodesPage() {
         </p>
 
         <p className="mt-2 text-sm text-slate-600">
-          {formattedExpiration
-            ? `Expires on ${formattedExpiration}`
+          {formatExpiration(expiresAt)
+            ? `Expires on ${formatExpiration(expiresAt)}`
             : "Generate a code to see expiration details"}
         </p>
 

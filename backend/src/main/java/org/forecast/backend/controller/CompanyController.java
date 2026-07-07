@@ -2,13 +2,10 @@ package org.forecast.backend.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.forecast.backend.dtos.company.CompanyResponse;
-import org.forecast.backend.dtos.company.CreateCompanyRequest;
-import org.forecast.backend.dtos.company.UpdateCompanyRequest;
+import org.forecast.backend.dtos.company.*;
 import org.forecast.backend.model.Company;
 import org.forecast.backend.service.CompanyLogoStorageService;
 import org.forecast.backend.service.CompanyService;
-import org.forecast.backend.dtos.company.InviteCodeResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,7 +28,7 @@ public class CompanyController {
     @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<List<CompanyResponse>> listCompanies() {
         List<Company> companies = companyService.listAll();
-        return ResponseEntity.ok(companies.stream().map(CompanyResponse::fromEntity).toList());
+        return ResponseEntity.ok(CompanyResponse.fromEntities(companies));
     }
 
     @PostMapping
@@ -42,7 +39,7 @@ public class CompanyController {
     }
 
     @PostMapping("/{companyId}/invite")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'COMPANY_ADMIN')")
     public ResponseEntity<InviteCodeResponse> generateInviteCode(@PathVariable UUID companyId) {
         String code = companyService.generateInviteCode(companyId);
         var company = companyService.getById(companyId);

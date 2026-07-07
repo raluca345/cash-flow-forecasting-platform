@@ -69,8 +69,8 @@ class CompanyControllerRoleAccessTest {
     }
 
     @Test
-    @WithMockUser(roles = "FINANCE")
-    void financeRole_cannotListCompanies_forbidden() throws Exception {
+    @WithMockUser(roles = "COMPANY_MEMBER")
+    void companyMemberRole_cannotListCompanies_forbidden() throws Exception {
         mockMvc.perform(get("/api/v1/companies").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -131,8 +131,8 @@ class CompanyControllerRoleAccessTest {
     }
 
     @Test
-    @WithMockUser(roles = "FINANCE")
-    void financeRole_cannotGetCompany_forbidden() throws Exception {
+    @WithMockUser(roles = "COMPANY_MEMBER")
+    void companyMemberRole_cannotGetCompany_forbidden() throws Exception {
         mockMvc.perform(get("/api/v1/companies/{companyId}", UUID.randomUUID()))
                 .andExpect(status().isForbidden());
 

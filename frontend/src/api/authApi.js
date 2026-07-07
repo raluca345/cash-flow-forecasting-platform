@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch } from "./httpClient";
 import { normalizeAuthApiError } from "../lib/authErrors";
 
 export async function signup(payload) {

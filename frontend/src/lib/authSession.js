@@ -34,6 +34,10 @@ export function getStoredTokenClaims() {
 }
 
 export function getRoleFromClaims(claims) {
+  if (claims?.role === "FINANCE") {
+    return "COMPANY_MEMBER";
+  }
+
   return claims?.role ?? null;
 }
 

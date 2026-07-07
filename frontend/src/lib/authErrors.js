@@ -12,6 +12,8 @@ const FRIENDLY_MESSAGE_MAP = {
     "You need to sign in again before continuing",
   "An unexpected error occurred. Please try again later.":
     "Something went wrong. Please try again in a moment",
+  "Data integrity violation: possible duplicate or invalid value":
+    "Something went wrong. Please try again",
 };
 
 const FRIENDLY_FIELD_MESSAGE_MAP = {

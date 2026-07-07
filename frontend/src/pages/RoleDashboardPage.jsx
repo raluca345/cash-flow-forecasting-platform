@@ -8,7 +8,7 @@ export default function RoleDashboardPage() {
     return <Navigate to="/admin" replace />;
   }
 
-  if (role === "COMPANY_ADMIN" || role === "FINANCE") {
+  if (role === "COMPANY_ADMIN" || role === "COMPANY_MEMBER") {
     return <Navigate to="/app" replace />;
   }
 

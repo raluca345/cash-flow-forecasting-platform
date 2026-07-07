@@ -9,7 +9,7 @@ import useAuthStore from "../store/authStore";
 export default function CompanyLayout() {
   const role = useAuthStore((state) => state.role);
 
-  if (role !== "COMPANY_ADMIN" && role !== "FINANCE") {
+  if (role !== "COMPANY_ADMIN" && role !== "COMPANY_MEMBER") {
     return <Navigate to="/" replace />;
   }
 

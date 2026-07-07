@@ -31,7 +31,7 @@ public class RecurringInvoiceController {
     private final IRecurringInvoiceService recurringInvoiceService;
 
     @PostMapping
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<RecurringInvoiceResponse> createRecurringInvoice(
             @Valid @RequestBody CreateRecurringInvoiceRequest request
     ) {
@@ -40,7 +40,7 @@ public class RecurringInvoiceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<PaginatedResponse<RecurringInvoiceResponse>> listRecurringInvoices(
             @PageableDefault(size = 10, sort = "nextGenerationDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
@@ -54,14 +54,14 @@ public class RecurringInvoiceController {
     }
 
     @GetMapping("/{recurringInvoiceId}")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<RecurringInvoiceResponse> getRecurringInvoice(@PathVariable UUID recurringInvoiceId) {
         RecurringInvoice recurringInvoice = recurringInvoiceService.get(recurringInvoiceId);
         return ResponseEntity.ok(RecurringInvoiceResponse.fromEntity(recurringInvoice));
     }
 
     @PatchMapping("/{recurringInvoiceId}")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<RecurringInvoiceResponse> updateRecurringInvoice(
             @PathVariable UUID recurringInvoiceId,
             @Valid @RequestBody UpdateRecurringInvoiceRequest request
@@ -71,14 +71,14 @@ public class RecurringInvoiceController {
     }
 
     @PatchMapping("/{recurringInvoiceId}/activate")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<RecurringInvoiceResponse> activateRecurringInvoice(@PathVariable UUID recurringInvoiceId) {
         RecurringInvoice recurringInvoice = recurringInvoiceService.activate(recurringInvoiceId);
         return ResponseEntity.ok(RecurringInvoiceResponse.fromEntity(recurringInvoice));
     }
 
     @PatchMapping("/{recurringInvoiceId}/deactivate")
-    @PreAuthorize("hasRole('FINANCE')")
+    @PreAuthorize("hasRole('COMPANY_MEMBER')")
     public ResponseEntity<RecurringInvoiceResponse> deactivateRecurringInvoice(@PathVariable UUID recurringInvoiceId) {
         RecurringInvoice recurringInvoice = recurringInvoiceService.deactivate(recurringInvoiceId);
         return ResponseEntity.ok(RecurringInvoiceResponse.fromEntity(recurringInvoice));
